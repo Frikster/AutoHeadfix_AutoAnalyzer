@@ -5,6 +5,7 @@ import csv
 import numpy as np
 import collections
 from datetime import datetime
+import itertools
 
 class PreprocessTextfiles:     
     # Column numbers
@@ -23,14 +24,18 @@ class PreprocessTextfiles:
         self.workingDir = workingDir
         self.foldersToIgnore = foldersToIgnore 
         
+        self.binnedLines = None
+        self.duplicates = None
+        self.duplicatesKept = None
+        
         self.txtList = self.getAllTextLocs(workingDir)
-        self.textDict =self.importTextsToDict(self.txtList)
+        self.all_lines_no_dupes = self.get_all_lines_no_dupes(self.txtList)
+        
+        #self.textDict =self.importTextsToDict(self.txtList)
         
         self.linesSorted = []
-        for i in range(len(self.textDict.items())):
-            self.linesSorted.extend(self.textDict.items()[i][1]) 
-            
-        self.binnedLines = None
+        #for i in range(len(self.textDict.items())):
+        #    self.linesSorted.extend(self.textDict.items()[i][1]) 
         
     def getAllTextLocs(self,workingDir):
         """
@@ -52,7 +57,7 @@ class PreprocessTextfiles:
             lines: The lines of the textfile as a 2D list
             textFileLoc: The path of each textFile that was imported.      
         """    
-        lines = []  
+        lines_list = []  
         textFileLoc=[]
         # Append them all into one matrix (the ones with the appropriate number of columns)
         for i in range(len(txtList)):
@@ -69,13 +74,25 @@ class PreprocessTextfiles:
                         newLines.append(newLines[-1][:])
                         newLines[-1][self.actionCol] = self.seshEnd_str
                         newLines[-1][self.tagCol] = self.seshEndTag_str
-                    lines.append(newLines)
+                    lines_list.append(newLines)
                     textFileLoc.append(txtList[i])
                 else:
                     print("Text file does not have enough rows - "+textFile)
             except BaseException:
                 print("Text file does not have enough columns - "+textFile)
-        return(zip(lines,textFileLoc))
+        return(zip(lines_list,textFileLoc))
+        
+    def get_all_lines_no_dupes(self,txt_list):
+        """Returns a list of lists that contains all lines from all text files in txt_list with duplicates removed"""
+        list_of_Mat = self.importTextsToListofMat(txt_list)
+        lines_list = zip(*list_of_Mat)[0]
+        lines_list = list(itertools.chain.from_iterable(lines_list))
+        lines_list = [list(x) for x in set(tuple(x) for x in lines_list)] 
+        return lines_list
+        
+        
+        
+        
         
     def sort_X_BasedOn_Y_BeingSorted(self,X,Y):
         """Sorts X based on the result from Y being sorted"""
@@ -84,69 +101,13 @@ class PreprocessTextfiles:
         inds = Y.argsort()
         return(X[inds]) 
     
-    def getDupes(self,):
-        """Return a tuple of text file locations and their startSeshes that have been identified as duplicates, ordered by StartSesh"""
+    def setDuplicates(self,lines_list,textFileLoc):
+        """Return a tuple of text file locations and their startSeshes that have been identified as duplicates,
+        ordered by StartSesh"""
         # Remove the text files that have the same start time as another     
         startSeshes = []
-        for i in range(len(lines)):
-            startSeshes.append(lines[i][0][self.timeCol])
-        
-        def equalToAnother(elem):
-            return (startSeshes.count(elem) > 1)
-            
-        def NOTequalToAnother(elem):
-            return (startSeshes.count(elem) == 1)  
-        
-        # Indices of all text files that are duplicates of another and those that are unique
-        equalStartInd=map(equalToAnother,startSeshes)
-        notEqualStartInd = map(NOTequalToAnother, startSeshes)
-        
-        # Retrieve text file names and start times that have duplicates
-        textFileEquals=np.asarray(textFileLoc)[np.asarray(equalStartInd)]
-        startTimeEquals=np.asarray(startSeshes)[np.asarray(equalStartInd)]
-        
-    
-    
-    def importTextsToDict(self,txtList):
-        """
-        Return a dictionary that has each path of each text file as the key to a matrix that contains all the lines of each text file - duplicates removed, ordered by textFile startseshes
-        """
-        workingDir = self.workingDir
-        txtList = self.getAllTextLocs(workingDir)
-        # Remove all the paths that are subdirectories of the ignore folders
-        for i in range(len(self.foldersToIgnore)):
-            txtList=[x for x in txtList if not (self.foldersToIgnore[i] in x)]
-        
-        # Lines contains the lines from each text file where lines[i] contains all the lines of the i'th text file
-        ListofMat=self.importTextsToListofMat(txtList)           
-        lines = zip(*ListofMat)[0]
-        textFileLoc = zip(*ListofMat)[1]         
-        
-        ###
-        
-        # Remove the text files that have the same start time as another     
-        startSeshes = []
-        for i in range(len(lines)):
-            startSeshes.append(lines[i][0][self.timeCol])
-        
-        def equalToAnother(elem):
-            return (startSeshes.count(elem) > 1)
-            
-        def NOTequalToAnother(elem):
-            return (startSeshes.count(elem) == 1)  
-        
-        # Indices of all text files that are duplicates of another and those that are unique
-        equalStartInd=map(equalToAnother,startSeshes)
-        notEqualStartInd = map(NOTequalToAnother, startSeshes)
-        
-        # Retrieve text file names and start times that have duplicates
-        textFileEquals=np.asarray(textFileLoc)[np.asarray(equalStartInd)]
-        startTimeEquals=np.asarray(startSeshes)[np.asarray(equalStartInd)]
-        
-        # Remove the text files that have the same start time as another     
-        startSeshes = []
-        for i in range(len(lines)):
-            startSeshes.append(lines[i][0][self.timeCol])
+        for i in range(len(lines_list)):
+            startSeshes.append(lines_list[i][0][self.timeCol])
         
         def equalToAnother(elem):
             return (startSeshes.count(elem) > 1)
@@ -166,6 +127,14 @@ class PreprocessTextfiles:
         textFileEquals = self.sort_X_BasedOn_Y_BeingSorted(textFileEquals,startTimeEquals)
         startTimeEquals = self.sort_X_BasedOn_Y_BeingSorted(startTimeEquals,startTimeEquals)
         
+        self.duplicates = zip(textFileEquals,startTimeEquals)
+        
+    def setDuplicatesThatWereKept(self):
+        if self.duplicates == None:
+            assert(1==0,'No duplicates have been set')
+        textFileEquals = zip(*self.duplicates)[0]
+        startTimeEquals = zip(*self.duplicates)[1]
+        
         textFileEqualsOnlyOne = [] # you are the only one baby!
         startTimeEqualsOnlyOne = []
         # Create a list that only contains one (any one) of the textFiles that have a duplicate
@@ -177,33 +146,113 @@ class PreprocessTextfiles:
             else:
                     startTimeEqualsOnlyOne.append(startTimeEquals[i])
                     textFileEqualsOnlyOne.append(textFileEquals[i])
+                    
+        self.duplicatesKept = zip(textFileEqualsOnlyOne,startTimeEqualsOnlyOne)
+    
+    
+    def importTextsToDict(self,txtList):
+        """
+        Return a dictionary that has each path of each text file as the key to a matrix that contains all the lines_list of each text file 
+        - duplicates removed, ordered by textFile startseshes
+        """
+        workingDir = self.workingDir
+        txtList = self.getAllTextLocs(workingDir)
+        # Remove all the paths that are subdirectories of the ignore folders
+        for i in range(len(self.foldersToIgnore)):
+            txtList=[x for x in txtList if not (self.foldersToIgnore[i] in x)]
         
+        # lines_list contains the lines_list from each text file where lines_list[i] contains all the lines_list of the i'th text file
+        ListofMat=self.importTextsToListofMat(txtList)           
+        lines_list = zip(*ListofMat)[0]
+        textFileLoc = zip(*ListofMat)[1]         
+        
+        if self.duplicates == None:
+            self.setDuplicates(lines_list,textFileLoc)
+            self.setDuplicatesThatWereKept()
+        
+        ######
+        ## Remove the text files that have the same start time as another     
+        #startSeshes = []
+        #for i in range(len(lines_list)):
+        #    startSeshes.append(lines_list[i][0][self.timeCol])
+        #
+        #def equalToAnother(elem):
+        #    return (startSeshes.count(elem) > 1)
+        #    
+        #def NOTequalToAnother(elem):
+        #    return (startSeshes.count(elem) == 1)  
+        #
+        ## Indices of all text files that are duplicates of another and those that are unique
+        #equalStartInd=map(equalToAnother,startSeshes)
+        #notEqualStartInd = map(NOTequalToAnother, startSeshes)
+        #
+        ## Retrieve text file names and start times that have duplicates
+        #textFileEquals=np.asarray(textFileLoc)[np.asarray(equalStartInd)]
+        #startTimeEquals=np.asarray(startSeshes)[np.asarray(equalStartInd)]
+        #
+        #
+        ## Sort these text files by start time  
+        #textFileEquals = self.sort_X_BasedOn_Y_BeingSorted(textFileEquals,startTimeEquals)
+        #startTimeEquals = self.sort_X_BasedOn_Y_BeingSorted(startTimeEquals,startTimeEquals)
+        ######
+        
+        #textFileEqualsOnlyOne = [] # you are the only one baby!
+        #startTimeEqualsOnlyOne = []
+        ## Create a list that only contains one (any one) of the textFiles that have a duplicate
+        #for i in range(len(startTimeEquals)):
+        #    if i != range(len(startTimeEquals))[-1]:
+        #        if startTimeEquals[i] != startTimeEquals[i+1]:
+        #            startTimeEqualsOnlyOne.append(startTimeEquals[i])
+        #            textFileEqualsOnlyOne.append(textFileEquals[i])
+        #    else:
+        #            startTimeEqualsOnlyOne.append(startTimeEquals[i])
+        #            textFileEqualsOnlyOne.append(textFileEquals[i])
+
+        
+        #notEqualStartInd = map(NOTequalToAnother, startSeshes)
+
+        
+        ###
         # Remove all the text files that have a duplicate (another text file with identical startSesh) 
         # notEqualStartInd - indices of all text files that have unique startSeshes
-        lines = np.asarray(lines)[np.asarray(notEqualStartInd)]
-        lines = lines.tolist()
-        textFileLoc = np.asarray(textFileLoc)[np.asarray(notEqualStartInd)]
-        textFileLoc = textFileLoc.tolist()
-        startSeshes = np.asarray(startSeshes)[np.asarray(notEqualStartInd)]
-        startSeshes = startSeshes.tolist()
-            
-        # Right, and now add only one of each of the duplicates back to 'lines'
+        #lines_list = np.asarray(lines_list)[np.asarray(notEqualStartInd)]
+        #lines_list = lines_list.tolist()
+        #textFileLoc = np.asarray(textFileLoc)[np.asarray(notEqualStartInd)]
+        #textFileLoc = textFileLoc.tolist()
+        #startSeshes = np.asarray(startSeshes)[np.asarray(notEqualStartInd)]
+        #startSeshes = startSeshes.tolist()
+        ###
+        
+        # Remove all the text files that have a duplicate (another text file with identical startSesh) 
+        textFileEquals = zip(*self.duplicates)[0]
+        startTimeEquals = zip(*self.duplicates)[1]        
+        lines_list = [line for line in lines_list if line[0][self.timeCol] in startTimeEquals]
+        textFileLoc = [textF for textF in textFileLoc if textF in textFileEquals]
+        
+        assert(len(lines_list)==len(textFileLoc))
+        
+         
+        # Right, and now add only one of each of the duplicates back to 'lines_list'
         #[linesOneDup,textFileLocOneDup]=importTextsToListofMat(textFileEqualsOnlyOne) 
+        textFileEqualsOnlyOne = zip(*self.duplicatesKept)[0]
         ListofMat=self.importTextsToListofMat(textFileEqualsOnlyOne)           
         linesOneDup = zip(*ListofMat)[0]
         textFileLocOneDup = zip(*ListofMat)[1]
         
         for linesToAdd in linesOneDup:
-            lines.append(linesToAdd)
+            lines_list.append(linesToAdd)
         for locToAdd in textFileLocOneDup:
             textFileLoc.append(locToAdd)  
         
         # Sort the text file contents and names by startSeshes
+        startSeshes = []
+        for i in range(len(lines_list)):
+            startSeshes.append(lines_list[i][0][self.timeCol])
         textFileLoc = self.sort_X_BasedOn_Y_BeingSorted(textFileLoc,startSeshes)
-        lines = self.sort_X_BasedOn_Y_BeingSorted(lines,startSeshes)
+        lines_list = self.sort_X_BasedOn_Y_BeingSorted(lines_list,startSeshes)
         
         # Add these two to a dictionary
-        textDict = collections.OrderedDict(zip(textFileLoc, lines))                           
+        textDict = collections.OrderedDict(zip(textFileLoc, lines_list))                           
         return textDict
         
     def getCol(self,listOfLists,colNum):
@@ -228,7 +277,7 @@ class PreprocessTextfiles:
 
     def setBins(self,binTime):
         """    
-        Bin list of all sorted lines into per binTime lists
+        Bin list of all sorted lines_list into per binTime lists
         For your convenience: there are 86400 seconds in a day
         Returns: BinnedList: np.array([[a],[b]...]) where the first line in a,b... is binTime seconds before the last
         """  
@@ -251,12 +300,7 @@ class PreprocessTextfiles:
             print('bin created from ' + str(startInd) + ' to ' + str(endInd))
             
         self.binnedLines = binnedLines
-        
-    def getBins():
-        if self.binnedLines == None:
-            assert(1==0,'binnedLines have not been set')
-        return self.binnedLines
-            
+                    
     def getCol_binnedLines(self,colNum):        
         """return list of lists that would be the binned lists of a particular column"""
         if self.binnedLines == None:
@@ -265,7 +309,7 @@ class PreprocessTextfiles:
         flag = 0
         for lines in self.binnedLines:
             print("getCol_binnedLines "+str(flag))
-            if len(lines) > 0:
+            if len(lines_list) > 0:
                 binnedLines_col.append(self.getCol(lines,colNum))
             else:
                 print('getCol_binnedLines - NOTHING APPENDED')
@@ -278,9 +322,9 @@ class PreprocessTextfiles:
             assert(1==0,'binnedLines have not been set')
         binnedLines_tags = []
         
-        for lines in self.binnedLines:
+        for lines_list in self.binnedLines:
             theBin = []
-            for line in lines:
+            for line in lines_list:
                 if int(line[self.tagCol]) in chosenTags:
                     theBin.append(line)
             binnedLines_tags.append(theBin)
@@ -302,10 +346,10 @@ class PreprocessTextfiles:
         if self.binnedLines == None:
             assert(1==0,'binnedLines have not been set')
         freqsForEach = []
-        for lines in self.binnedLines:
+        for lines_list in self.binnedLines:
             freqsForBin = []
             for tag in chosenTags:
-                tagRowsBin = self.getBinnedRows_tag([lines],[tag])
+                tagRowsBin = self.getBinnedRows_tag([lines_list],[tag])
                 print("findFreqsForEach "+str(len( tagRowsBin))) #should not be 62
                 if len( tagRowsBin[0]) == 0:
                     print('WE GOT HERE!!!')
