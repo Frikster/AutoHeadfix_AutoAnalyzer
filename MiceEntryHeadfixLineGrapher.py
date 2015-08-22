@@ -17,6 +17,8 @@ import pylab as p
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import pickle
+import os
+import csv
 # Bokeh
 import time
 from bokeh.plotting import figure, output_server, cursession, show
@@ -24,8 +26,10 @@ from bokeh.plotting import figure, output_server, cursession, show
 working_dir = "T:/AutoHeadFix/"
 folders_to_ignore = ["Old and or nasty data goes here"]
 output_loc = "C:\\Users\\user\\Downloads\\"
-pickle_name = "C:\\Users\\user\\Documents\\Dirk\\Bokeh\\AutoHeadfix_AutoAnalyzer\\current_dat.p"
+pickle_name = "C:\\Users\\user\\Documents\\Dirk\\Bokeh\\AutoHeadfix_AutoAnalyzer\\Output\\current_dat.p"
 bin_time = 86400
+
+os.chdir("C:\\Users\\user\\Documents\\Dirk\\Bokeh\\AutoHeadfix_AutoAnalyzer\\Output")
 
 # Column numbers
 TAG_COL = 0
@@ -47,7 +51,7 @@ for i in range(len(mice_groups.items())):
     
 # Try to load saved preprocessed text files if they are on hand
 try:
-    current_dat=pickle.load(open( pickle_name, "r" ))
+    current_dat=pickle.load(open( pickle_name, "rb" ))
 except BaseException:
     print("No Pickle. Loading most recent results instead")
     current_dat = PreprocessTextfiles(working_dir, folders_to_ignore,output_dir='')
@@ -85,6 +89,7 @@ def genplot_error_bars(x,y,yerror,tit,ylab,xlab,out_loc=output_loc):
     plt.title(tit)
     plt.ylabel(ylab)
     plt.xlabel(xlab)
+    plt.show()
     plt.savefig(out_loc+tit+" "+ylab+".png", bbox_inches='tight')   
     
 def gen2plots_error_bars(x1,y1,x2,y2,yerror1,yerror2,legend1,legend2,tit,ylab,xlab,out_loc=output_loc): 
@@ -100,6 +105,7 @@ def gen2plots_error_bars(x1,y1,x2,y2,yerror1,yerror2,legend1,legend2,tit,ylab,xl
     plt.title(tit)
     plt.ylabel(ylab)
     plt.xlabel(xlab)
+    plt.show()
     plt.savefig(output_loc+tit+" "+ylab+".png", bbox_inches='tight')
 
 def plot_results_for_tags(chosen_tags,out_loc):
@@ -126,21 +132,70 @@ def plot_results_for_tags(chosen_tags,out_loc):
     genplot_error_bars(x,y_entry,yerror_entry,'EL Average Daily Entry Frequency',ylab,xlab,out_loc=output_loc)  
 
 
-def plot_time_between_actions_for_tag(chosen_tag,out_loc,actionA,actionB,current_dat):  
+def plot_time_between_actions_for_tag(chosen_tag,out_loc,actionA,actionB,current_dat,bin_time):  
     """Plots the amount of time spent between actionA and actionB for a mouse for each bin"""  
-    m = Mouse(chosen_tag,mice_groups,current_dat)
+    m = Mouse(chosen_tag,mice_groups,current_dat,bin_time)
       
-    y = m.time_between_actions_list(actionA,actionB,list(current_dat.binned_lines))
+    y = m.time_between_actions_list(actionA,actionB)
     x = [i+1 for i in range(len(y))]
     yerror = 0
-    tit = 'test'
+    tit = str(chosen_tag) + ' - ' + actionA +' - '+actionB
     xlab= 'Day'
-    ylab = 'Time spent b/w...'
+    ylab = 'Total time spent inbetween actions in 24 hours'
     
     
     genplot_error_bars(x,y,yerror,tit,ylab,xlab)                         
-plot_time_between_actions_for_tag(2015050115,output_loc,'entry','exit',current_dat)
-                                                
+
+#for tag in tags:
+    #plot_time_between_actions_for_tag(tag,output_loc,'entry','exit',current_dat,bin_time)
+    #plot_time_between_actions_for_tag(tag,output_loc,'reward0','check+',current_dat,bin_time)
+
+timesbetweens_headfixes = []
+timesbetweens_chamber = []
+
+for tag in tags:
+    fig, ax = plt.subplots()
+    m = Mouse(tag,mice_groups,current_dat,bin_time)
+    timesbetween = m.get_between_actions_dist('reward0','check+') 
+    timesbetweens_headfixes.append(timesbetween)
+    # Get rid of the ones too far to the right
+    timesbetween = [i for i in timesbetween if i < 600]
+    
+    hist, bins = np.histogram(timesbetween, bins=20)
+    tit = str(tag)+' - '+'reward0 to check+'
+    xlab = 'Time between headfixes'
+    plt.title(tit)
+    plt.ylabel('Frequency')
+    plt.xlabel(xlab)
+    width = 0.5 * (bins[1] - bins[0])
+    center = (bins[:-1] + bins[1:]) / 2
+    plt.bar(center, hist, align='center', width=width)
+    plt.show()
+    plt.savefig(output_loc+tit+" "+xlab+".png", bbox_inches='tight')
+    
+    fig, ax = plt.subplots()
+    timesbetween = m.get_between_actions_dist('entry','exit')
+    timesbetweens_chamber.append(timesbetween)
+    hist, bins = np.histogram(timesbetween, bins=100)
+    tit = str(tag)+' - '+'entry to exit'
+    xlab = 'Time spent in chamber'
+    plt.title(tit)
+    plt.ylabel('Frequency')
+    plt.xlabel(xlab)
+    width = 0.7 * (bins[1] - bins[0])
+    center = (bins[:-1] + bins[1:]) / 2
+    plt.bar(center, hist, align='center', width=width)
+    plt.show()
+    plt.savefig(output_loc+tit+" "+xlab+".png", bbox_inches='tight')
+
+                                            
+
+
+
+
+
+
+
 
 # TODO LATER: get all the stats on all the mice and save csv, use mouse class (because fuck you Canopy for crashing and not autosaving)    
 def global_stats():

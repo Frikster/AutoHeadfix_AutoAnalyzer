@@ -31,6 +31,9 @@ class PreprocessTextfiles:
         self.txt_list = self.get_all_text_locs(working_dir)
         self.all_lines = self.get_all_lines_no_dupes(self.txt_list)
         
+        zipped = self.import_texts_to_list_of_mat(self.txt_list)
+        self.texts_imported = zip(*zipped)[1]
+        
         # Sort the lines
         times = self.get_col(self.all_lines,self.TIME_COL)
         self.all_lines = self.sort_X_BasedOn_Y_BeingSorted(self.all_lines,times) 
@@ -72,6 +75,11 @@ class PreprocessTextfiles:
                 if file.endswith(".txt"):
                     print(os.path.join(root, file))
                     txt_list.append(os.path.join(root, file))
+                    
+         # Remove all the paths that are subdirectories of the ignore folders
+        for i in range(len(self.folders_to_ignore)):
+            txt_list=[x for x in txt_list if not (self.folders_to_ignore[i] in x)]
+        
         return txt_list
     
     def import_texts_to_list_of_mat(self,txtList):
@@ -144,7 +152,7 @@ class PreprocessTextfiles:
             start_ind = end_ind
             end_ind = end_ind + bin_time
             print('bin created from ' + str(start_ind) + ' to ' + str(end_ind))
-            
+          
         self.binned_lines = binned_lines
         
     def get_col_binned_lines(self,col_num):        

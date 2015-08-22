@@ -11,14 +11,48 @@ class Mouse:
     DATE_COL = 2
     ACTION_COL = 3 
     
-    def __init__(tag,mice_groups,current_dat):   
+    def __init__(self,tag,mice_groups,current_dat,bin_time):   
         self.tag = int(tag)
         self.mice_groups = mice_groups
         self.group = self.findgroup(tag)
         
-        self.all_lines = current_dat.all_lines
-        self.all_lines = [L for L in self.all_lines if int(self.all_lines[self.TAG_COL])==self.tag]
+        #self.all_lines = current_dat.all_lines
+        self.all_lines = [L for L in current_dat.all_lines if int(L[self.TAG_COL])==int(self.tag)]
+        # replace check1+ with check+
+        for line in self.all_lines:
+            if line[self.ACTION_COL] == 'check1+':
+                line[self.ACTION_COL] = 'check+'
         
+        self.binned_lines = self.set_bins(bin_time)
+        
+    def eAnd(self,*args):
+        """Returns a list that is the element-wise 'and' operation along each index of each list in args"""
+        return [all(tuple) for tuple in zip(*args)] 
+        
+    def set_bins(self,bin_time):
+        """    
+        Bin list of all sorted lines_list into per binTime lists
+        For your convenience: there are 86400 seconds in a day
+        Returns: BinnedList: np.array([[a],[b]...]) where the first line in a,b... is binTime seconds before the last
+        """  
+        all_lines = self.all_lines
+        column_of_times = self.get_col(all_lines,self.TIME_COL)
+        column_of_times = [ float(x) for x in column_of_times]
+        column_of_times = np.array(column_of_times)
+        all_lines = np.array(all_lines)
+        
+        binned_lines = []
+        start_ind = column_of_times[0]
+        end_ind = start_ind + bin_time
+        
+        while end_ind <= column_of_times[len(column_of_times)-1]:
+            the_bin = all_lines[np.array(self.eAnd(column_of_times>=start_ind,column_of_times<end_ind))]
+            binned_lines.append(the_bin)
+            start_ind = end_ind
+            end_ind = end_ind + bin_time
+            print('Mouse '+ str(self.tag) +' bin created from ' + str(start_ind) + ' to ' + str(end_ind))
+          
+        return binned_lines   
         
     def get_col(self,list_of_lists,col_num):
         """return desired column from list of lists as a list"""
@@ -33,39 +67,79 @@ class Mouse:
     def time_between(self,actionA,actionB,lines):
         """Returns the total time between actionA and actionB in lines"""
         total = 0
-        #cond1 = line[self.ACTION_COL]==actionA and line[self.TAG_COL]==self.tag
-        #cond2 = line[self.ACTION_COL]==actionB and line[self.TAG_COL]==self.tag
         
         relevantlines=[L for L in lines if L[self.ACTION_COL]==actionA or L[self.ACTION_COL]==actionB]
+        
+        if len(relevantlines) >0:                
+            # If the first line is actionB, add the time from the beginning of lines
+            if relevantlines[0][self.ACTION_COL] == actionB:
+                total = total + (float(relevantlines[0][self.TIME_COL])-float(lines[0][self.TIME_COL]))
+                relevantlines.pop(0)
+    
+            # If the last line is actionA, add the time from that point to the end
+            if  relevantlines[len(relevantlines)-1][self.ACTION_COL] == actionA:
+                total = total + (float(lines[len(lines)-1][self.TIME_COL])-float(relevantlines[len(relevantlines)-1][self.TIME_COL]))
+                relevantlines.pop(-1)
+            
+            # if there is anything left continue trying to find the remaining times between
+            # We are assuming ActionA and ActionB always alternate in occurence so at this point on zero or more than
+            # one action can remain
+            if len(relevantlines) >1:   
+                # Get all the relevantlines that have each action
+                relevantlines_actionA = [line for line in relevantlines if line[self.ACTION_COL]==actionA]
+                relevantlines_actionB = [line for line in relevantlines if line[self.ACTION_COL]==actionB]
                 
-        # If the first line is actionB, add the time from the beginning of lines
-        if relevantlines[0][self.ACTION_COL] == actionB:
-            total = total + (float(relevantlines[0][self.TIME_COL])-float(lines[0][self.TIME_COL]))
-            relevantlines.pop(0)
+                if len(relevantlines_actionA)==0 or len(relevantlines_actionA)==0:
+                    print(relevantlines_actionA)
+                    print(relevantlines_actionB) 
 
-        # If the last line is actionA, add the time from that point to the end
-        if  relevantlines[len(relevantlines)-1][self.ACTION_COL] == actionA:
-            total = total + (float(lines[len(lines)-1][self.TIME_COL])-float(relevantlines[len(relevantlines)-1][self.TIME_COL]))
-            relevantlines.pop(-1)
-        
-        # Get all the relevantlines that have each action
-        relevantlines_actionA = [line for line in relevantlines if line[self.ACTION_COL]==actionA]
-        relevantlines_actionB = [line for line in relevantlines if line[self.ACTION_COL]==actionB]
-        
-        timesbetween = [b-a for a,b in zip(relevantlines_actionA,relevantlines_actionB)]
-        return sum(timesbetween)+total
+                # Get the two columns of times
+                actionA_times = self.get_col(relevantlines_actionA,self.TIME_COL)
+                actionB_times = self.get_col(relevantlines_actionB,self.TIME_COL)
+            
+                timesbetween = [float(b)-float(a) for a,b in zip(actionA_times,actionB_times)]
+                total = sum(timesbetween) + total
+        return total
             
 
-    def time_between_actions_list(self,actionA,actionB,binned_lines):
+    def time_between_actions_list(self,actionA,actionB):
         """Returns the time spent between actionA and B by this mouse for each bin""" 
         bin_chamber_time = []
-        for lines in binned_lines:
+        for lines in self.binned_lines:
             bin_chamber_time.append(self.time_between(actionA,actionB,lines)) 
         return bin_chamber_time  
     
 
+    def get_between_actions_dist(self,actionA,actionB):
+        """Returns a list that contains each time interval between actionA and actionB for this mouse"""
+        relevantlines=[L for L in self.all_lines if L[self.ACTION_COL]==actionA or L[self.ACTION_COL]==actionB]
+        
+        #Drop the first and last line since the first one will typically be check+ and the last one reward0
+        if(relevantlines[0][self.ACTION_COL]==actionB):
+            relevantlines.pop(0)
+        if(relevantlines[len(relevantlines)-1][self.ACTION_COL]==actionA):
+            relevantlines.pop(-1)
+        
+        assert(relevantlines[0][self.ACTION_COL]==actionA)
+        assert(relevantlines[len(relevantlines)-1][self.ACTION_COL]==actionB)
+                  
+        # Get all the relevantlines that have each action
+        relevantlines_actionA = [line for line in relevantlines if line[self.ACTION_COL]==actionA]
+        relevantlines_actionB = [line for line in relevantlines if line[self.ACTION_COL]==actionB]
+        
+        assert(len(relevantlines_actionA)==len(relevantlines_actionA))
 
-
+        # Get the two columns of times
+        actionA_times = self.get_col(relevantlines_actionA,self.TIME_COL)
+        actionB_times = self.get_col(relevantlines_actionB,self.TIME_COL)
+    
+        timesbetween = [float(b)-float(a) for a,b in zip(actionA_times,actionB_times)]
+        return timesbetween
+        
+        
+        
+        
+        
 
     #def time_between_rewards(binned_lines):
     #    """Returns the time between headfixes for this mouse for each bin""" 
