@@ -5,7 +5,6 @@ os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
 
 import cfg
 from PreprocessTextfiles import PreprocessTextfiles
-from AutoHeadfixGlobals import TextColumnNumbers
 
 import numpy as np
 from datetime import datetime

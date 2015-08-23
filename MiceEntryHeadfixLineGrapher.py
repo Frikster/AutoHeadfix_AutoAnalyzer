@@ -113,7 +113,7 @@ def plot_results_for_tags(chosen_tags,out_loc,k):
 for k in cfg.MICE_GROUPS.keys():
     plot_results_for_tags(cfg.MICE_GROUPS[k],cfg.OUTPUT_LOC,k)
 
-
+plot_results_for_tags(cfg.TAGS,cfg.OUTPUT_LOC,'All Mice')
 
 
 def plot_time_between_actions_for_tag(chosen_tag,out_loc,actionA,actionB,current_dat,bin_time):  
@@ -130,9 +130,9 @@ def plot_time_between_actions_for_tag(chosen_tag,out_loc,actionA,actionB,current
     
     genplot_error_bars(x,y,yerror,tit,ylab,xlab)                         
 
-#for tag in tags:
-    #plot_time_between_actions_for_tag(tag,output_loc,'entry','exit',current_dat,bin_time)
-    #plot_time_between_actions_for_tag(tag,output_loc,'reward0','check+',current_dat,bin_time)
+
+
+
 def hists_that_tim_likes_for_bokeh():
     timesbetweens_headfixes = []
     timesbetweens_chamber = []
@@ -177,9 +177,70 @@ def hists_that_tim_likes_for_bokeh():
         plt.savefig(cfg.OUTPUT_LOC+tit+" "+xlab+".png", bbox_inches='tight')
         
     return [timesbetweens_headfixes,timesbetweens_chamber]
+
+
+
+
+                                   
+
+
+# TODO LATER: get all the stats on all the mice and save csv, use mouse class (because fuck you Canopy for crashing and not autosaving)    
+def global_stats():
+    
+    #for k in cfg.MICE_GROUPS.keys():
+    #    #for tags in cfg.MICE_GROUPS[k]:
+    #        freqs_hf = 0
+    #        freqs_ent = 0
+    #        for tag in tags:
+    #            freqs_hf_new=current_dat.find_freqs_for_each(cfg.HEADFIX_STR,cfg.ACTION_COL,[tag])
+    #            freqs_ent_new=current_dat.find_freqs_for_each(cfg.ENTRY_STR,cfg.ACTION_COL,[tag])
+    #            freqs_hf = freqs_hf + freqs_hf_new
+    #            freqs_ent = freqs_ent + freqs_ent_new  
+    #        print("Total Heafixes made by "+str(k)+": "+str(sum(freqs_hf)))
+    #        print("Total Entries made by "+str(k)+": "+str(sum(freqs_ent)))
+    #        print("Average Daily Heafixes made by "+str(k)+": "+str(sum(freqs_hf)/len(freqs_hf)))
+    #        print("Average Daily Entries made by "+str(k)+": "+str(sum(freqs_ent)/len(freqs_ent)))
+    #        print("Average Daily Heafixes per Mouse made by "+str(k)+": "+str(sum(freqs_hf)/len(freqs_hf)))
+    #        print("Average Daily Entries per Mouse made by "+str(k)+": "+str(sum(freqs_ent)/len(freqs_ent)))
+    for k in cfg.MICE_GROUPS.keys():
+        freqs_hf=current_dat.find_freqs_for_each(cfg.HEADFIX_STR,cfg.ACTION_COL,cfg.MICE_GROUPS[k])
+        freqs_ent=current_dat.find_freqs_for_each(cfg.ENTRY_STR,cfg.ACTION_COL,cfg.MICE_GROUPS[k])
+        print("Total Heafixes made by "+str(k)+": "+str(sum(freqs_hf)))
+        print("Total Entries made by "+str(k)+": "+str(sum(freqs_ent)))
+        print("Average Daily Heafixes made by "+str(k)+": "+str(sum(freqs_hf)/len(freqs_hf)))
+        print("Average Daily Entries made by "+str(k)+": "+str(sum(freqs_ent)/len(freqs_ent)))
+        
+        avg_daily_hf=sum(freqs_hf)/len(freqs_hf)
+        avg_daily_ent =sum(freqs_ent)/len(freqs_ent)
+        
+        print("Average Daily Heafixes per Mouse made by "+str(k)+": "+str(avg_daily_hf/len(cfg.MICE_GROUPS[k])))
+        print("Average Daily Entries per Mouse made by "+str(k)+": "+str(avg_daily_ent/len(cfg.MICE_GROUPS[k])))
+    
+    
+    for tag in cfg.TAGS:
+        freqs_hf=current_dat.find_freqs_for_each(cfg.HEADFIX_STR,cfg.ACTION_COL,[tag])
+        freqs_ent=current_dat.find_freqs_for_each(cfg.ENTRY_STR,cfg.ACTION_COL,[tag])
+        print("Total Heafixes made by "+str(tag)+": "+str(sum(freqs_hf)))
+        print("Total Entries made by "+str(tag)+": "+str(sum(freqs_ent)))
+        print("Average Daily Heafixes made by "+str(tag)+": "+str(sum(freqs_hf)/len(freqs_hf)))
+        print("Average Daily Entries made by "+str(tag)+": "+str(sum(freqs_ent)/len(freqs_ent)))
+        
+
+
+#### UNCOMMENT TO GET GRAPHS ###
+for tag in cfg.TAGS:
+    plot_time_between_actions_for_tag(tag,cfg.OUTPUT_LOC,'entry','exit',current_dat,cfg.BIN_TIME)
+    plot_time_between_actions_for_tag(tag,cfg.OUTPUT_LOC,'reward0','check+',current_dat,cfg.BIN_TIME)
+    
 hists_that_tim_likes_for_bokeh()
 
+global_stats()
+    
 
+    
+ 
+          
+                   
 def bokeh():
     # output to static HTML file
     output_file("hists_that_tim_likes.html", title="line plot example")
@@ -191,17 +252,13 @@ def bokeh():
     hist = Histrogram(x, y, legend="Temp.", line_width=2)
     
     # show the results
-    show(hist)                                           
-
-
-# TODO LATER: get all the stats on all the mice and save csv, use mouse class (because fuck you Canopy for crashing and not autosaving)    
-def global_stats():
-   return None
-    
-            
+    show(hist)               
 # TODO LATER: raw freq for each mouse (because fuck you Canopy for crashing and not autosaving)    
 def DONTDELETEYET():
     # Debugging:
+    
+
+
     
     tagRowsBin = getRows_tag([FbinnedLines[0]],[tags[0]])
     #findFreq(tagRowsBin,'reward0',actionCol)[0]
