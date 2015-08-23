@@ -1,15 +1,15 @@
 """Plot line graphs of each mouse's entry and headFix 
-args:
-    working_dir (str): Full path of the directory that contains all textFiles to be analyzed
-    folders_to_ignore ([str]): List of folders that are ignored. Only the folders name is required, not each one's full path
-    output_loc (str): where any analysis is outputted to
-    pickle_name (str): the name of a pickle file that contains preprocessed textFiles, placed in the same directory as this script
-    bin_time (int): the time in seconds of bins for the graph (86400 = seconds in a day)
 
 Typical example:
 workingDir = T:/AutoHeadFix/
 foldersToIgnore = ["Old and or nasty data goes here"]
 """
+
+# Change working directory to where this module is before doing anything else
+import os, sys
+os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
+
+import cfg
 from PreprocessTextfiles import PreprocessTextfiles
 from Mouse import Mouse
 import numpy as np
@@ -21,44 +21,23 @@ import os
 import csv
 # Bokeh
 import time
-from bokeh.plotting import figure, output_server, cursession, show
+from bokeh.plotting import figure, output_file, output_server, cursession, show
 
-working_dir = "T:/AutoHeadFix/"
-folders_to_ignore = ["Old and or nasty data goes here"]
-output_loc = "C:\\Users\\user\\Downloads\\"
-pickle_name = "C:\\Users\\user\\Documents\\Dirk\\Bokeh\\AutoHeadfix_AutoAnalyzer\\Output\\current_dat.p"
-bin_time = 86400
-
-os.chdir("C:\\Users\\user\\Documents\\Dirk\\Bokeh\\AutoHeadfix_AutoAnalyzer\\Output")
-
-# Column numbers
-TAG_COL = 0
-TIME_COL = 1
-DATE_COL = 2
-ACTION_COL = 3 
-HEADFIX_STR = 'reward0'
-ENTRY_STR = 'entry'
-global mice_groups    
-mice_groups = {
-    'EL':[2015050115,1312000377,1312000159,1302000245,1312000300],
-    'EP': [1302000139,2015050202,1412000238],
-    'AB': [1312000592,1312000573,1312000090]
-}
-global tags
-tags = []
-for i in range(len(mice_groups.items())):
-    tags.extend(mice_groups.items()[i][1])
+# pickle_name (str): the name of a pickle file that contains preprocessed textFiles, placed in the same directory as this script 
+##pickle_name=raw_input("What is the name of your pickle, good sir? Save it in the folder where this is being run from")
+##    "C:\\Users\\user\\Documents\\Dirk\\Bokeh\\AutoHeadfix_AutoAnalyzer\\Output\\current_dat.p"
+pickle_name = "current_dat"      
+pickle_name = pickle_name+'.p'
     
 # Try to load saved preprocessed text files if they are on hand
 try:
     current_dat=pickle.load(open( pickle_name, "rb" ))
 except BaseException:
-    print("No Pickle. Loading most recent results instead")
-    current_dat = PreprocessTextfiles(working_dir, folders_to_ignore,output_dir='')
+    print("No Pickle. Preprocessing textfiles from working_dir instead")
+    current_dat = PreprocessTextfiles()
     pickle.dump(current_dat, open(pickle_name, "wb" ) )
     
-current_dat.set_bins(bin_time)
-
+current_dat.set_bins()
 
 def mean(data):
     """Return the sample arithmetic mean of data."""
@@ -82,7 +61,7 @@ def pstdev(data):
     pvar = ss/n # the population variance
     return pvar**0.5  
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
-def genplot_error_bars(x,y,yerror,tit,ylab,xlab,out_loc=output_loc):   
+def genplot_error_bars(x,y,yerror,tit,ylab,xlab,out_loc=cfg.OUTPUT_LOC):   
     """Plots x vs y with yerror for error bars, tit as title ylab, xlab as labels for axis and outputs graph to out_loc."""
     fig,ax = plt.subplots()
     plt.errorbar(x,y,yerr=yerror) 
@@ -92,7 +71,7 @@ def genplot_error_bars(x,y,yerror,tit,ylab,xlab,out_loc=output_loc):
     plt.show()
     plt.savefig(out_loc+tit+" "+ylab+".png", bbox_inches='tight')   
     
-def gen2plots_error_bars(x1,y1,x2,y2,yerror1,yerror2,legend1,legend2,tit,ylab,xlab,out_loc=output_loc): 
+def gen2plots_error_bars(x1,y1,x2,y2,yerror1,yerror2,legend1,legend2,tit,ylab,xlab,out_loc=cfg.OUTPUT_LOC): 
     """Plots x1 vs y1 and x2 vs y2 on same axis with yerror1 and 2 for error bars,
     tit as title ylab, xlab as labels for axis, legends1 and 2 to descrive the two plots
     and outputs graph to out_loc."""    
@@ -106,16 +85,16 @@ def gen2plots_error_bars(x1,y1,x2,y2,yerror1,yerror2,legend1,legend2,tit,ylab,xl
     plt.ylabel(ylab)
     plt.xlabel(xlab)
     plt.show()
-    plt.savefig(output_loc+tit+" "+ylab+".png", bbox_inches='tight')
+    plt.savefig(cfg.OUTPUT_LOC+tit+" "+ylab+".png", bbox_inches='tight')
 
-def plot_results_for_tags(chosen_tags,out_loc):
+def plot_results_for_tags(chosen_tags,out_loc,k):
     """ chosen_tags [int]: tags of mice for which plots are to be made
     out_loc (str): location where plots will be saved to file
     Plots 3 plots, 1 for average headfix frequency, 1 for entries and 
     another with both on the same axis. All with error bars for a specified group   
     """
-    yDist_hf=current_dat.find_freqs_for_each(current_dat.all_lines,HEADFIX_STR,ACTION_COL,chosen_tags)
-    yDist_entry=current_dat.find_freqs_for_each(current_dat.all_lines,ENTRY_STR,ACTION_COL,chosen_tags)
+    yDist_hf=current_dat.find_freqs_for_each(cfg.HEADFIX_STR,cfg.ACTION_COL,chosen_tags)
+    yDist_entry=current_dat.find_freqs_for_each(cfg.ENTRY_STR,cfg.ACTION_COL,chosen_tags)
     
     yerror_hf=map(pstdev,yDist_hf)
     y_hf = map(mean,yDist_hf)
@@ -127,14 +106,19 @@ def plot_results_for_tags(chosen_tags,out_loc):
     ylab = 'Average Frequency'
     xlab = 'Day'
     
-    gen2plots_error_bars(x,y_hf,x,y_entry,yerror_hf,yerror_entry,'Headfixing','Entries','EL Average Daily Frequency of Actions',ylab,xlab,out_loc=output_loc)
-    genplot_error_bars(x,y_hf,yerror_hf,'EL Average Daily Headfix Frequency',ylab,xlab,out_loc=output_loc)
-    genplot_error_bars(x,y_entry,yerror_entry,'EL Average Daily Entry Frequency',ylab,xlab,out_loc=output_loc)  
+    gen2plots_error_bars(x,y_hf,x,y_entry,yerror_hf,yerror_entry,'Headfixing','Entries',k+' Average Daily Frequency of Actions',ylab,xlab,out_loc=cfg.OUTPUT_LOC)
+    genplot_error_bars(x,y_hf,yerror_hf,k+' Average Daily Headfix Frequency',ylab,xlab,out_loc=cfg.OUTPUT_LOC)
+    genplot_error_bars(x,y_entry,yerror_entry,k+' Average Daily Entry Frequency',ylab,xlab,out_loc=cfg.OUTPUT_LOC)  
+
+for k in cfg.MICE_GROUPS.keys():
+    plot_results_for_tags(cfg.MICE_GROUPS[k],cfg.OUTPUT_LOC,k)
+
+
 
 
 def plot_time_between_actions_for_tag(chosen_tag,out_loc,actionA,actionB,current_dat,bin_time):  
     """Plots the amount of time spent between actionA and actionB for a mouse for each bin"""  
-    m = Mouse(chosen_tag,mice_groups,current_dat,bin_time)
+    m = Mouse(chosen_tag,cfg.MICE_GROUPS,current_dat,bin_time)
       
     y = m.time_between_actions_list(actionA,actionB)
     x = [i+1 for i in range(len(y))]
@@ -149,52 +133,65 @@ def plot_time_between_actions_for_tag(chosen_tag,out_loc,actionA,actionB,current
 #for tag in tags:
     #plot_time_between_actions_for_tag(tag,output_loc,'entry','exit',current_dat,bin_time)
     #plot_time_between_actions_for_tag(tag,output_loc,'reward0','check+',current_dat,bin_time)
-
-timesbetweens_headfixes = []
-timesbetweens_chamber = []
-
-for tag in tags:
-    fig, ax = plt.subplots()
-    m = Mouse(tag,mice_groups,current_dat,bin_time)
-    timesbetween = m.get_between_actions_dist('reward0','check+') 
-    timesbetweens_headfixes.append(timesbetween)
-    # Get rid of the ones too far to the right
-    timesbetween = [i for i in timesbetween if i < 600]
+def hists_that_tim_likes_for_bokeh():
+    timesbetweens_headfixes = []
+    timesbetweens_chamber = []
     
-    hist, bins = np.histogram(timesbetween, bins=20)
-    tit = str(tag)+' - '+'reward0 to check+'
-    xlab = 'Time between headfixes'
-    plt.title(tit)
-    plt.ylabel('Frequency')
-    plt.xlabel(xlab)
-    width = 0.5 * (bins[1] - bins[0])
-    center = (bins[:-1] + bins[1:]) / 2
-    plt.bar(center, hist, align='center', width=width)
-    plt.show()
-    plt.savefig(output_loc+tit+" "+xlab+".png", bbox_inches='tight')
+    for tag in cfg.TAGS:
+        fig, ax = plt.subplots()
+        m = Mouse(tag,cfg.MICE_GROUPS,current_dat,cfg.BIN_TIME)
+        timesbetween = m.get_between_actions_dist('reward0','check+') 
+        timesbetweens_headfixes.append(timesbetween)
+        # Get rid of the ones too far to the right
+        timesbetween = [i for i in timesbetween if i < 600]
+        
+        hist, bins = np.histogram(timesbetween, bins=20)
+        tit = str(tag)+' - '+'reward0 to check+'
+        xlab = 'Time between headfixes'
+        plt.title(tit)
+        plt.ylabel('Frequency')
+        plt.xlabel(xlab)
+        width = 0.5 * (bins[1] - bins[0])
+        center = (bins[:-1] + bins[1:]) / 2
+        plt.bar(center, hist, align='center', width=width)
+        plt.show()
+        plt.savefig(cfg.OUTPUT_LOC+tit+" "+xlab+".png", bbox_inches='tight')
+        
+        fig, ax = plt.subplots()
+        timesbetween = m.get_between_actions_dist('entry','exit')
+        timesbetweens_chamber.append(timesbetween)
+        
+        # Get rid of the ones too far to the right
+        timesbetween = [i for i in timesbetween if i < 600]
+        
+        hist, bins = np.histogram(timesbetween, bins=20)
+        tit = str(tag)+' - '+'entry to exit'
+        xlab = 'Time spent in chamber'
+        plt.title(tit)
+        plt.ylabel('Frequency')
+        plt.xlabel(xlab)
+        width = 0.7 * (bins[1] - bins[0])
+        center = (bins[:-1] + bins[1:]) / 2
+        plt.bar(center, hist, align='center', width=width)
+        plt.show()
+        plt.savefig(cfg.OUTPUT_LOC+tit+" "+xlab+".png", bbox_inches='tight')
+        
+    return [timesbetweens_headfixes,timesbetweens_chamber]
+hists_that_tim_likes_for_bokeh()
+
+
+def bokeh():
+    # output to static HTML file
+    output_file("hists_that_tim_likes.html", title="line plot example")
     
-    fig, ax = plt.subplots()
-    timesbetween = m.get_between_actions_dist('entry','exit')
-    timesbetweens_chamber.append(timesbetween)
-    hist, bins = np.histogram(timesbetween, bins=100)
-    tit = str(tag)+' - '+'entry to exit'
-    xlab = 'Time spent in chamber'
-    plt.title(tit)
-    plt.ylabel('Frequency')
-    plt.xlabel(xlab)
-    width = 0.7 * (bins[1] - bins[0])
-    center = (bins[:-1] + bins[1:]) / 2
-    plt.bar(center, hist, align='center', width=width)
-    plt.show()
-    plt.savefig(output_loc+tit+" "+xlab+".png", bbox_inches='tight')
-
-                                            
-
-
-
-
-
-
+    # create a new plot with a title and axis labels
+    p = figure(title="simple line example", x_axis_label='x', y_axis_label='y')
+    
+    # add a line renderer with legend and line thickness
+    hist = Histrogram(x, y, legend="Temp.", line_width=2)
+    
+    # show the results
+    show(hist)                                           
 
 
 # TODO LATER: get all the stats on all the mice and save csv, use mouse class (because fuck you Canopy for crashing and not autosaving)    

@@ -1,5 +1,10 @@
 """Class holding all attributes related to preprocessing textFiles"""
 
+# Change working directory to where this module is before doing anything else
+import os, sys
+os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
+
+import cfg
 import os
 import csv
 import numpy as np
@@ -8,51 +13,36 @@ from datetime import datetime
 import itertools
 import csv
 
-class PreprocessTextfiles:     
-    # Column numbers
-    TAG_COL = 0
-    TIME_COL = 1
-    DATE_COL = 2
-    ACTION_COL = 3   
-    
+class PreprocessTextfiles:        
     # string constants that define textFile
     seshStart_str = 'SeshStart'
     seshEnd_str = 'SeshEnd'   
     seshStartTag_str = '0000000000'
     seshEndTag_str = '0000000000'  
     
-    def __init__(self, working_dir, folders_to_ignore,output_dir=''):
-        self.working_dir = working_dir
-        self.folders_to_ignore = folders_to_ignore 
-        
+    def __init__(self):       
         self.binned_lines = None
-        self.texts_not_imported = None
-        
-        self.txt_list = self.get_all_text_locs(working_dir)
-        self.all_lines = self.get_all_lines_no_dupes(self.txt_list)
-        
+        # self.texts_not_imported = [texts_not_imported_col_condition,texts_not_imported_row_condition,texts_not_imported_row_condition]
+        self.texts_not_imported = None    
+        self.txt_list = self.get_all_text_locs()
+        self.all_lines = self.get_all_lines_no_dupes(self.txt_list)      
         zipped = self.import_texts_to_list_of_mat(self.txt_list)
-        self.texts_imported = zip(*zipped)[1]
-        
+        self.texts_imported = zip(*zipped)[1]       
         # Sort the lines
-        times = self.get_col(self.all_lines,self.TIME_COL)
-        self.all_lines = self.sort_X_BasedOn_Y_BeingSorted(self.all_lines,times) 
-          
+        times = self.get_col(self.all_lines,cfg.TIME_COL)
+        self.all_lines = self.sort_X_BasedOn_Y_BeingSorted(self.all_lines,times)           
         # if an output_dir was specified, output a csv to it
-        if output_dir != '':
-            self.output_all_lines_to_csv(output_dir)
-        else:
-            self.output_all_lines_to_csv('Result.csv')
-            
+        self.output_all_lines_to_csv()
+                    
         #self.textDict =self.importTextsToDict(self.txtList)
         
         #self.lines_sorted = []
         #for i in range(len(self.textDict.items())):
         #    self.linesSorted.extend(self.textDict.items()[i][1]) 
    
-    def output_all_lines_to_csv(self,output_dir):
+    def output_all_lines_to_csv(self):
         """ouput all lines imported to a single csv"""
-        with open(output_dir+"all_lines.csv", "wb") as f:
+        with open(cfg.OUTPUT_LOC+"\\all_lines.csv", "wb") as f:
             writer = csv.writer(f)
             writer.writerows(self.all_lines)
             
@@ -67,21 +57,21 @@ class PreprocessTextfiles:
         """return desired column from list of lists as a list"""
         return list(np.asarray(list_of_lists)[:,col_num])    
        
-    def get_all_text_locs(self,working_dir):
+    def get_all_text_locs(self):
         """Get a list of all text files in the given folder (including subdirectories)"""
         txt_list = []
-        for root, dirs, files in os.walk(working_dir):
+        for root, dirs, files in os.walk(cfg.DIR_WITH_TEXTFILES):
             for file in files:
                 if file.endswith(".txt"):
                     print(os.path.join(root, file))
                     txt_list.append(os.path.join(root, file))
                     
          # Remove all the paths that are subdirectories of the ignore folders
-        for i in range(len(self.folders_to_ignore)):
-            txt_list=[x for x in txt_list if not (self.folders_to_ignore[i] in x)]
+        for i in range(len(cfg.FOLDERS_TO_IGNORE)):
+            txt_list=[x for x in txt_list if not (cfg.FOLDERS_TO_IGNORE[i] in x)]
         
         return txt_list
-    
+        
     def import_texts_to_list_of_mat(self,txtList):
         """Import viable text_files to a list of matrices
             Returns:
@@ -91,7 +81,9 @@ class PreprocessTextfiles:
         """    
         lines_list = []  
         text_file_loc=[]
-        texts_not_imported=[]
+        texts_not_imported_col_condition=[]
+        texts_not_imported_row_condition=[]
+        texts_not_imported_absolute_start_condition=[]
         # Append them all into one matrix (the ones with the appropriate number of columns)
         for i in range(len(txtList)):
             text_file = txtList[i]
@@ -100,22 +92,40 @@ class PreprocessTextfiles:
                     reader = csv.reader(f, delimiter="\t")
                     new_lines = list(reader)
                 print(str(len(new_lines))+" - "+text_file)
-                # Only consider textFile with more than 2 rows and that have 'SeshStart' in first line                                                                                               
-                if len(new_lines) > 2 and new_lines[0][self.ACTION_COL]==self.seshStart_str:
-                    # Add a row for textFiles missing a SeshEnd          
-                    if new_lines[-1][self.ACTION_COL] != self.seshEnd_str: 
-                        new_lines.append(new_lines[-1][:])
-                        new_lines[-1][self.ACTION_COL] = self.seshEnd_str
-                        new_lines[-1][self.TAG_COL] = self.seshEndTag_str
-                    lines_list.append(new_lines)
-                    text_file_loc.append(txtList[i])
+                # Don't consider textfiles before specfied time
+                text_start_date = datetime.strptime(new_lines[0][cfg.DATE_COL], '%Y-%m-%d %H:%M:%S.%f')
+                if  text_start_date > cfg.ABSOLUTE_START_TIME:
+                    # Only consider textFile with more than 2 rows and that have 'SeshStart' in first line                                                                                               
+                    if len(new_lines) > 2 and new_lines[0][cfg.ACTION_COL]==self.seshStart_str:
+                        # Add a row for textFiles missing a SeshEnd          
+                        if new_lines[-1][cfg.ACTION_COL] != self.seshEnd_str: 
+                            new_lines.append(new_lines[-1][:])
+                            new_lines[-1][cfg.ACTION_COL] = self.seshEnd_str
+                            new_lines[-1][cfg.TAG_COL] = self.seshEndTag_str
+                        lines_list.append(new_lines)
+                        text_file_loc.append(txtList[i])
+                    else:
+                        print("Text file does not have enough rows - "+text_file)
+                        texts_not_imported_row_condition.append(text_file)
                 else:
-                    print("Text file does not have enough rows - "+text_file)
-                    texts_not_imported.append(text_file)
+                    print("Text file was taken too early - "+text_file)
+                    texts_not_imported_absolute_start_condition.append(text_file)
             except BaseException:
                 print("Text file does not have enough columns - "+text_file)
-                texts_not_imported.append(text_file)
-        self.texts_not_imported = texts_not_imported
+                texts_not_imported_col_condition.append(text_file)
+        self.texts_not_imported = [texts_not_imported_col_condition,texts_not_imported_row_condition,texts_not_imported_absolute_start_condition]
+        
+        # Sort the text file contents and names by startSeshes
+        startSeshes = []
+        for i in range(len(lines_list)):
+            startSeshes.append(lines_list[i][0][cfg.TIME_COL])
+        print(startSeshes[0:5])
+        print(text_file_loc[0:5])
+        print(lines_list[0:5])
+        text_file_loc = self.sort_X_BasedOn_Y_BeingSorted(text_file_loc,startSeshes)
+        lines_list = self.sort_X_BasedOn_Y_BeingSorted(lines_list,startSeshes)   
+        print(text_file_loc[0:5])
+        print(lines_list[0:5])    
         return(zip(lines_list,text_file_loc))
         
     def get_all_lines_no_dupes(self,txt_list):
@@ -130,66 +140,124 @@ class PreprocessTextfiles:
         """Returns a list that is the element-wise 'and' operation along each index of each list in args"""
         return [all(tuple) for tuple in zip(*args)]   
 
-    def set_bins(self,bin_time):
+    def set_bins(self):
         """    
         Bin list of all sorted lines_list into per binTime lists
         For your convenience: there are 86400 seconds in a day
         Returns: BinnedList: np.array([[a],[b]...]) where the first line in a,b... is binTime seconds before the last
         """  
         all_lines = self.all_lines
-        column_of_times = self.get_col(all_lines,self.TIME_COL)
+        column_of_times = self.get_col(all_lines,cfg.TIME_COL)
         column_of_times = [ float(x) for x in column_of_times]
         column_of_times = np.array(column_of_times)
         all_lines = np.array(all_lines)
         
         binned_lines = []
         start_ind = column_of_times[0]
-        end_ind = start_ind + bin_time
+        end_ind = start_ind + cfg.BIN_TIME
         
         while end_ind <= column_of_times[len(column_of_times)-1]:
             the_bin = all_lines[np.array(self.eAnd(column_of_times>=start_ind,column_of_times<end_ind))]
             binned_lines.append(the_bin)
             start_ind = end_ind
-            end_ind = end_ind + bin_time
+            end_ind = end_ind + cfg.BIN_TIME
             print('bin created from ' + str(start_ind) + ' to ' + str(end_ind))
           
         self.binned_lines = binned_lines
+ #       
+ #   def get_col_binned_lines(self,binned_lines,col_num):        
+ #       """return list of lists that would be the binned lists of a particular column"""
+ #       if self.binned_lines == None:
+ #           assert(1==0,'binned_lines have not been set')
+ #       binned_lines_col = []
+ #       for lines_list in self.binned_lines:
+ #           if len(lines_list) > 0:
+ #               binned_lines_col.append(self.get_col(lines_list,col_num))
+ #       return binned_lines_col
+ #             
+ #   def get_binned_rows_tag(self,binned_lines,chosen_tags):
+ #       """return list of lists that are all binned lines that are by a mouse in tags """
+ #       if self.binned_lines == None:
+ #           assert(1==0,'binned_lines have not been set')
+ #       binned_lines_tags = []
+ #       
+ #       for lines_list in self.binned_lines:
+ #           the_bin = []
+ #           for line in lines_list:
+ #               if int(line[cfg.TAG_COL]) in chosen_tags:
+ #                   the_bin.append(line)
+ #           binned_lines_tags.append(the_bin)
+ #       return binned_lines_tags
+ #       
+ #   def get_freq_list_binned(self,binned_lines,item,col_num):
+ #       """return list of list that is the count of the occurence of 'item' in each list (in column col_num) in binned_lines"""
+ #       if self.binned_lines == None:
+ #           assert(1==0,'binned_lines have not been set')
+ #       freqs = []
+ #       
+ #       chosen_col = self.get_col_binned_lines(self.binned_lines,col_num)
+ #       for its in chosen_col:
+ #           freqs.append(its.count(item)) 
+ #       return freqs
+ #
+ #   def find_freqs_for_each(self,item,col_num,chosen_tags):
+ #       """return list of list that is the counts of item for each chosen mouse for each bin in col_num"""
+ #       if self.binned_lines == None:
+ #           assert(1==0,'binned_lines have not been set')
+ #       freqs_for_each = []
+ #       for lines_list in self.binned_lines:
+ #           freqs_for_bin = []
+ #           for tag in chosen_tags:
+ #               tag_rows_bin = self.get_binned_rows_tag([lines_list],[tag])
+ #               #tag_rows_bin = self.get_binned_rows_tag([tag])
+ #               if len( tag_rows_bin[0]) == 0:
+ #                   freqs_for_bin.append(0)
+ #               else: 
+ #                   freqs_for_bin.append(self.get_freq_list_binned(tag_rows_bin,item,col_num)[0])
+ #                   #freqs_for_bin.append(self.get_freq_list_binned(item,col_num)[0])
+ #           freqs_for_each.append(freqs_for_bin)
+ #       return freqs_for_each
         
-    def get_col_binned_lines(self,col_num):        
+        
+        
+###################################        
+        
+        
+    def get_col_binned_lines(self,binned_lines,col_num):        
         """return list of lists that would be the binned lists of a particular column"""
         if self.binned_lines == None:
             assert(1==0,'binned_lines have not been set')
         binned_lines_col = []
-        for lines_list in self.binned_lines:
+        for lines_list in binned_lines:
             if len(lines_list) > 0:
                 binned_lines_col.append(self.get_col(lines_list,col_num))
         return binned_lines_col
               
-    def get_binned_rows_tag(self,chosen_tags):
+    def get_binned_rows_tag(self,binned_lines,chosen_tags):
         """return list of lists that are all binned lines that are by a mouse in tags """
         if self.binned_lines == None:
             assert(1==0,'binned_lines have not been set')
         binned_lines_tags = []
         
-        for lines_list in self.binned_lines:
+        for lines_list in binned_lines:
             the_bin = []
             for line in lines_list:
-                if int(line[self.TAG_COL]) in chosen_tags:
+                if int(line[cfg.TAG_COL]) in chosen_tags:
                     the_bin.append(line)
             binned_lines_tags.append(the_bin)
         return binned_lines_tags
         
-    def get_freq_list_binned(self,item,col_num):
+    def get_freq_list_binned(self,binned_lines,item,col_num):
         """return list of list that is the count of the occurence of 'item' in each list (in column col_num) in binned_lines"""
         if self.binned_lines == None:
             assert(1==0,'binned_lines have not been set')
         freqs = []
         
-        chosen_col = self.get_col_binned_lines(self.binned_lines,col_num)
+        chosen_col = self.get_col_binned_lines(binned_lines,col_num)
         for its in chosen_col:
             freqs.append(its.count(item)) 
         return freqs
- 
+        
     def find_freqs_for_each(self,item,col_num,chosen_tags):
         """return list of list that is the counts for each mouse for each bin for item in col_num"""
         if self.binned_lines == None:
@@ -205,11 +273,9 @@ class PreprocessTextfiles:
                     freqs_for_bin.append(self.get_freq_list_binned(tag_rows_bin,item,col_num)[0])
             freqs_for_each.append(freqs_for_bin)
         return freqs_for_each
+
  
-#workingDir = "T:/AutoHeadFix/"
-#foldersToIgnore = ["Old and or nasty data goes here"]   
-#output_dir = "C:/Users/user/Documents/Dirk/Bokeh/AutoHeadfix_AutoAnalyzer/Ignored/" 
-#test = PreprocessTextfiles(workingDir,foldersToIgnore,output_dir)
+#test = PreprocessTextfiles()
         
         
         
@@ -368,19 +434,20 @@ class PreprocessTextfiles:
 #        # Add these two to a dictionary
 #        textDict = collections.OrderedDict(zip(textFileLoc, lines_list))                           
 #        return textDict
-        
-
-    
-    #def convertToUsefulDate(self,DateList): 
-    #    """returns a list of dates converted to date objects"""                                                                                                                                                                                                
-    #    DateList_pr = DateList[:]
-    #    # Convert dates to date objects that are useable
-    #    for i in range(len(DateList_pr)):
-    #        DateList_pr[i]=(datetime.strptime(DateList[i], '%Y-%m-%d %H:%M:%S.%f'))   
-    #    return DateList_pr                                                                                                                                                                                                     
-    
-
-                    
+#        
+#
+#    
+#                                                                                                                                                                                                 
+#        def convertToUsefulDate(self,DateList): 
+#        """returns a list of dates converted to date objects"""                                                                                                                                                                                                
+#        DateList_pr = DateList[:]
+#        # Convert dates to date objects that are useable
+#        for i in range(len(DateList_pr)):
+#            DateList_pr[i]=(datetime.strptime(DateList[i], '%Y-%m-%d %H:%M:%S.%f'))   
+#        return DateList_pr    
+#    
+#
+#                    
 
     
 

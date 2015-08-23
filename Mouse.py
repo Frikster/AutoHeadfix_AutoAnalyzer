@@ -1,5 +1,12 @@
 """Class holding all attributes related to a single mouse"""
+# Change working directory to where this module is before doing anything else
+import os, sys
+os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
+
+import cfg
 from PreprocessTextfiles import PreprocessTextfiles
+from AutoHeadfixGlobals import TextColumnNumbers
+
 import numpy as np
 from datetime import datetime
 import re
@@ -116,12 +123,16 @@ class Mouse:
         
         #Drop the first and last line since the first one will typically be check+ and the last one reward0
         if(relevantlines[0][self.ACTION_COL]==actionB):
+            print(relevantlines[0])
             relevantlines.pop(0)
         if(relevantlines[len(relevantlines)-1][self.ACTION_COL]==actionA):
+            print(relevantlines[-1])
             relevantlines.pop(-1)
         
-        assert(relevantlines[0][self.ACTION_COL]==actionA)
-        assert(relevantlines[len(relevantlines)-1][self.ACTION_COL]==actionB)
+        print(relevantlines[0])
+        print(relevantlines[-1])
+        assert(relevantlines[0][cfg.ACTION_COL]==actionA)
+        assert(relevantlines[len(relevantlines)-1][cfg.ACTION_COL]==actionB)
                   
         # Get all the relevantlines that have each action
         relevantlines_actionA = [line for line in relevantlines if line[self.ACTION_COL]==actionA]
