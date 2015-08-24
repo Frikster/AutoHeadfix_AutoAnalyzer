@@ -110,10 +110,7 @@ def plot_results_for_tags(chosen_tags,out_loc,k):
     genplot_error_bars(x,y_hf,yerror_hf,k+' Average Daily Headfix Frequency',ylab,xlab,out_loc=cfg.OUTPUT_LOC)
     genplot_error_bars(x,y_entry,yerror_entry,k+' Average Daily Entry Frequency',ylab,xlab,out_loc=cfg.OUTPUT_LOC)  
 
-for k in cfg.MICE_GROUPS.keys():
-    plot_results_for_tags(cfg.MICE_GROUPS[k],cfg.OUTPUT_LOC,k)
 
-plot_results_for_tags(cfg.TAGS,cfg.OUTPUT_LOC,'All Mice')
 
 
 def plot_time_between_actions_for_tag(chosen_tag,out_loc,actionA,actionB,current_dat,bin_time):  
@@ -133,20 +130,27 @@ def plot_time_between_actions_for_tag(chosen_tag,out_loc,actionA,actionB,current
 
 
 
-def hists_that_tim_likes_for_bokeh():
-    timesbetweens_headfixes = []
-    timesbetweens_chamber = []
+def hists_that_tim_likes_for_bokeh(action1,action2,bin_no,cut_off=None):
+    """Plots histrograms of intervals between action1 and action2 for each mouse 
+    with bin_no bins and doesn't display any values above cut_off
+    returns the interval times and the interval times above the cut_off"""
+    timesbetweens = []
+    timesbetweens_cutoff = []
     
     for tag in cfg.TAGS:
         fig, ax = plt.subplots()
         m = Mouse(tag,cfg.MICE_GROUPS,current_dat,cfg.BIN_TIME)
-        timesbetween = m.get_between_actions_dist('reward0','check+') 
-        timesbetweens_headfixes.append(timesbetween)
-        # Get rid of the ones too far to the right
-        timesbetween = [i for i in timesbetween if i < 600]
-        
-        hist, bins = np.histogram(timesbetween, bins=20)
-        tit = str(tag)+' - '+'reward0 to check+'
+        timesbetween = m.get_between_actions_dist(action1,action2) 
+        timesbetweens.append(timesbetween)
+        # Get those too far right
+        timesbetween_cutoff = [i for i in timesbetween if i >= cut_off]
+        timesbetweens_cutoff.append(timesbetween_cutoff)
+        # Get rid of the ones too far to the right        
+        if cut_off != None:
+            timesbetween = [i for i in timesbetween if i < cut_off]
+       
+        hist, bins = np.histogram(timesbetween, bins=bin_no)
+        tit = str(tag)+' - '+action1+ ' to '+action2
         xlab = 'Time between headfixes'
         plt.title(tit)
         plt.ylabel('Frequency')
@@ -158,14 +162,9 @@ def hists_that_tim_likes_for_bokeh():
         plt.savefig(cfg.OUTPUT_LOC+tit+" "+xlab+".png", bbox_inches='tight')
         
         fig, ax = plt.subplots()
-        timesbetween = m.get_between_actions_dist('entry','exit')
-        timesbetweens_chamber.append(timesbetween)
-        
-        # Get rid of the ones too far to the right
-        timesbetween = [i for i in timesbetween if i < 600]
-        
-        hist, bins = np.histogram(timesbetween, bins=20)
-        tit = str(tag)+' - '+'entry to exit'
+                
+        hist, bins = np.histogram(timesbetween_cutoff, bins=bin_no)
+        tit = str(tag)+' - '+action1+ ' to '+action2 + ' after cutoff'
         xlab = 'Time spent in chamber'
         plt.title(tit)
         plt.ylabel('Frequency')
@@ -176,12 +175,7 @@ def hists_that_tim_likes_for_bokeh():
         plt.show()
         plt.savefig(cfg.OUTPUT_LOC+tit+" "+xlab+".png", bbox_inches='tight')
         
-    return [timesbetweens_headfixes,timesbetweens_chamber]
-
-
-
-
-                                   
+    return [timesbetweens,timesbetweens_cutoff]                                   
 
 
 # TODO LATER: get all the stats on all the mice and save csv, use mouse class (because fuck you Canopy for crashing and not autosaving)    
@@ -228,13 +222,68 @@ def global_stats():
 
 
 #### UNCOMMENT TO GET GRAPHS ###
-for tag in cfg.TAGS:
-    plot_time_between_actions_for_tag(tag,cfg.OUTPUT_LOC,'entry','exit',current_dat,cfg.BIN_TIME)
-    plot_time_between_actions_for_tag(tag,cfg.OUTPUT_LOC,'reward0','check+',current_dat,cfg.BIN_TIME)
-    
-hists_that_tim_likes_for_bokeh()
+#for tag in cfg.TAGS:
+#    plot_time_between_actions_for_tag(tag,cfg.OUTPUT_LOC,'entry','exit',current_dat,cfg.BIN_TIME)
+#    plot_time_between_actions_for_tag(tag,cfg.OUTPUT_LOC,'reward0','check+',current_dat,cfg.BIN_TIME)
 
-global_stats()
+#for k in cfg.MICE_GROUPS.keys():
+#    plot_results_for_tags(cfg.MICE_GROUPS[k],cfg.OUTPUT_LOC,k)
+#
+#plot_results_for_tags(cfg.TAGS,cfg.OUTPUT_LOC,'All Mice')
+
+[timesbetweens,timesbetweens_cutoff] = hists_that_tim_likes_for_bokeh('entry','exit',20,600)
+[timesbetweens,timesbetweens_cutoff] = hists_that_tim_likes_for_bokeh('reward0','check+',20,600)
+
+
+for i in range(len(cfg.TAGS)):
+    fig, ax = plt.subplots()
+            
+    hist, bins = np.histogram(timesbetweens_cutoff[i], bins=20)
+    tit = str(cfg.TAGS[i])+' - '+'entry'+ ' to '+'exit' + ' after cutoff'
+    xlab = 'Time spent in chamber'
+    plt.title(tit)
+    plt.ylabel('Frequency')
+    plt.xlabel(xlab)
+    width = 0.7 * (bins[1] - bins[0])
+    center = (bins[:-1] + bins[1:]) / 2
+    plt.bar(center, hist, align='center', width=width)
+    plt.show()
+    plt.savefig(cfg.OUTPUT_LOC+tit+" "+xlab+".png", bbox_inches='tight')
+
+#global_stats()
+
+#def hist(x):
+#    """Plots histrograms of x"""
+#    timesbetweens = []
+#    timesbetweens_cutoff = []
+#    
+#    for tag in cfg.TAGS:
+#        fig, ax = plt.subplots()
+#        m = Mouse(tag,cfg.MICE_GROUPS,current_dat,cfg.BIN_TIME)
+#        timesbetween = m.get_between_actions_dist(action1,action2) 
+#        timesbetweens.append(timesbetween)
+#        # Get those too far right
+#        timesbetween_cutoff = [i for i in timesbetween if i >= cut_off]
+#        timesbetweens_cutoff.append(timesbetween_cutoff)
+#        # Get rid of the ones too far to the right
+#        timesbetween = [i for i in timesbetween if i < cut_off]
+#
+#        
+#        hist, bins = np.histogram(timesbetween, bins=bin_no)
+#        tit = str(tag)+' - '+action1+ ' to '+action1
+#        xlab = 'Time between headfixes'
+#        plt.title(tit)
+#        plt.ylabel('Frequency')
+#        plt.xlabel(xlab)
+#        width = 0.5 * (bins[1] - bins[0])
+#        center = (bins[:-1] + bins[1:]) / 2
+#        plt.bar(center, hist, align='center', width=width)
+#        plt.show()
+#        plt.savefig(cfg.OUTPUT_LOC+tit+" "+xlab+".png", bbox_inches='tight')
+        
+
+
+
     
 
     
@@ -253,28 +302,6 @@ def bokeh():
     
     # show the results
     show(hist)               
-# TODO LATER: raw freq for each mouse (because fuck you Canopy for crashing and not autosaving)    
-def DONTDELETEYET():
-    # Debugging:
-    
-
-
-    
-    tagRowsBin = getRows_tag([FbinnedLines[0]],[tags[0]])
-    #findFreq(tagRowsBin,'reward0',actionCol)[0]
-    chosenCol = getCol_binnedLines(tagRowsBin,actionCol)
-    #binnedLines_col.append(getCol(lines,actionCol))
-    
-    
-    EL_binned=current_dat.get_binned_rows_tag(current_dat.all_lines,mice_groups['EL'])
-    
-    #EL_binnedTags = getCol_binnedLines(EL_binned,tagCol)
-    #EL_binnedTimes = getCol_binnedLines(EL_binned,timeCol)
-    #EL_binnedDates = getCol_binnedLines(EL_binned,dateCol)
-    #EL_binnedActions = getCol_binnedLines(EL_binned,actionCol)
-    y = findFreq(EL_binned,'reward0',actionCol)
-    
-    y = findFreq(EL_binned,'entry',actionCol)
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
  
 #if __name__ == '__main__':
