@@ -26,7 +26,8 @@ for i in range(len(MICE_GROUPS.items())):
 DIR_WITH_TEXTFILES = "T:/AutoHeadFix/"
 FOLDERS_TO_IGNORE = ["Old and or nasty data goes here"]
 OUTPUT_LOC = "C:\\Users\\user\\Downloads\\"
-BIN_TIME = 86400
+# BIN_TIME = 86400
+BIN_TIME = 3600
 
 # This says headfixing has occurred
 HEADFIX_STR='reward0'
@@ -34,11 +35,6 @@ ENTRY_STR='entry'
 
 
 # Define the time from when we start looking at textfiles
+#ABSOLUTE_START_TIME = "2015-06-13 01:00:00.000000"
 ABSOLUTE_START_TIME = "2015-06-13 01:00:00.000000"
 ABSOLUTE_START_TIME = datetime.strptime(ABSOLUTE_START_TIME, '%Y-%m-%d %H:%M:%S.%f')
-
-
-def test():
-    dasTestDate = datetime.strptime("2015-06-08 10:08:05.880218", '%Y-%m-%d %H:%M:%S.%f')
-
-    return dasTestDate > ABSOLUTE_START_TIME
