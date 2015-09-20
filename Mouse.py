@@ -8,6 +8,7 @@ from PreprocessTextfiles import PreprocessTextfiles
 
 import numpy as np
 from datetime import datetime
+from time import mktime
 import re
 
 class Mouse:  
@@ -17,7 +18,7 @@ class Mouse:
     DATE_COL = 2
     ACTION_COL = 3 
     
-    def __init__(self,tag,mice_groups,current_dat,bin_time):   
+    def __init__(self, tag, mice_groups, current_dat, bin_time):
         self.tag = int(tag)
         self.mice_groups = mice_groups
         self.group = self.findgroup(tag)
@@ -130,8 +131,8 @@ class Mouse:
         
         print(relevantlines[0])
         print(relevantlines[-1])
-        assert(relevantlines[0][cfg.ACTION_COL]==actionA)
-        assert(relevantlines[len(relevantlines)-1][cfg.ACTION_COL]==actionB)
+        assert(relevantlines[0][cfg.ACTION_COL] == actionA)
+        assert(relevantlines[len(relevantlines)-1][cfg.ACTION_COL] == actionB)
                   
         # Get all the relevantlines that have each action
         relevantlines_actionA = [line for line in relevantlines if line[self.ACTION_COL]==actionA]
@@ -140,16 +141,37 @@ class Mouse:
         assert(len(relevantlines_actionA)==len(relevantlines_actionA))
 
         # Get the two columns of times
-        actionA_times = self.get_col(relevantlines_actionA,self.TIME_COL)
-        actionB_times = self.get_col(relevantlines_actionB,self.TIME_COL)
+        actionA_times = self.get_col(relevantlines_actionA, self.TIME_COL)
+        actionB_times = self.get_col(relevantlines_actionB, self.TIME_COL)
     
         timesbetween = [float(b)-float(a) for a,b in zip(actionA_times,actionB_times)]
         return timesbetween
         
+    @staticmethod
+    def convert_to_date_obj(date_list):
+        """Convert dates to date objects """
+        # TODO: See if this is needed
+        # date_list_pr = [mktime(datetime.strptime(i, '%Y-%m-%d %H:%M:%S.%f').timetuple()) for i in date_list]
+        date_list_pr = date_list[:]
+        for i in range(len(date_list)):
+            try:
+                # TODO: Why are you converting these fuckers to seconds and not following the function comment?
+                #date_list_pr[i] = mktime(datetime.strptime(date_list[i], '%Y-%m-%d %H:%M:%S.%f').timetuple())
+                date_list_pr[i] = (datetime.strptime(date_list[i], '%Y-%m-%d %H:%M:%S.%f'))
+            except Exception:
+                try:
+                    #date_list_pr[i] = mktime(datetime.strptime(date_list[i], '%Y-%m-%d %H:%M:%S').timetuple())
+                    date_list_pr[i] = (datetime.strptime(date_list[i], '%Y-%m-%d %H:%M:%S'))
+                except Exception:
+                    print(date_list[i])
+        return date_list_pr
+
+
         
         
-        
-        
+
+
+
 
     #def time_between_rewards(binned_lines):
     #    """Returns the time between headfixes for this mouse for each bin""" 
