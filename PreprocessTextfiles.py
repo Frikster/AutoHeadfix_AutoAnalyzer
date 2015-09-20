@@ -13,6 +13,7 @@ from datetime import datetime
 import time
 import itertools
 import csv
+import copy
 
 class PreprocessTextfiles:        
     # string constants that define textFile
@@ -55,7 +56,8 @@ class PreprocessTextfiles:
     def output_all_lines_to_csv(self):
         """ouput all lines imported to a single csv"""
         with open(cfg.OUTPUT_LOC+"\\all_lines.csv", "wb") as f:
-            writer = csv.DictWriter(f, fieldnames = ["stuff1", "stuff2", "stuff3"], delimiter = ';')
+            writer = csv.DictWriter(f, fieldnames = [cfg.TAG_COL_NAME, cfg.TIME_COL_NAME, cfg.DATE_COL_NAME,
+                                                     cfg.ACTION_COL_NAME, cfg.TEXT_LOC_COL_NAME], delimiter=',')
             writer.writeheader()
             writer = csv.writer(f)
             writer.writerows(self.all_lines)
@@ -69,6 +71,9 @@ class PreprocessTextfiles:
         
     def get_col(self,list_of_lists,col_num):
         """return desired column from list of lists as a list"""
+
+        print(list_of_lists)
+        print(np.asarray(list_of_lists))
         return list(np.asarray(list_of_lists)[:,col_num])    
        
     def get_all_text_locs(self):
@@ -99,6 +104,7 @@ class PreprocessTextfiles:
         texts_not_imported_row_condition = []
         texts_not_imported_absolute_start_condition = []
 
+        # Add a column that records where each line is from (directory location)
         text_file_loc_each_line = []
 
         # Append them all into one matrix (the ones with the appropriate number of columns)
@@ -152,19 +158,31 @@ class PreprocessTextfiles:
         print(lines_list[0:5])    
         return(zip(lines_list, text_file_loc))
         
-    def get_all_lines_no_dupes(self,txt_list):
+    def get_all_lines_no_dupes(self, txt_list):
         """Returns a list of lists that contains all lines from all text files in txt_list with duplicates removed"""
         list_of_mat = self.import_texts_to_list_of_mat(txt_list)
         lines_list = zip(*list_of_mat)[0]
         lines_list = list(itertools.chain.from_iterable(lines_list))
-        ##
-        print(type(lines_list))
-        print(type(lines_list[1]))
-        ##
-        lines_list = [list(x) for x in set(tuple(x) for x in lines_list)]
+
+        # Delete the column containing textFile locations so that duplicates can be properly removed
+        # Create a copy
+        lines_list_copy = copy.deepcopy(lines_list)
+        for x in lines_list_copy:
+          del x[cfg.TEXT_LOC_COL]
+        lines_list_copy = [list(x) for x in set(tuple(x) for x in lines_list_copy)]
+        # The copy now contains all the unique lines without the textFile locs
+
+        # Re-ad the textFile locs to the copy
+        for line_copy_ind in range(len(lines_list_copy)):
+            for line_ind in range(len(lines_list)):
+                if lines_list_copy[line_copy_ind][cfg.TIME_COL] == lines_list[line_ind][cfg.TIME_COL] and \
+                        len(lines_list_copy[line_copy_ind]) == 4:
+                    lines_list_copy[line_copy_ind].append(lines_list[line_ind][cfg.TEXT_LOC_COL])
+        lines_list = lines_list_copy
+
         return lines_list
         
-    def eAnd(self,*args):
+    def eAnd(self, *args):
         """Returns a list that is the element-wise 'and' operation along each index of each list in args"""
         return [all(tuple) for tuple in zip(*args)]   
 

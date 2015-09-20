@@ -510,8 +510,8 @@ def hist_raw_count(action, mice, tit, xlab,ylab):
 
 
 # TODO: MOVE THESE CALLS!
-[bin_starts,count_act_bins]=hist_raw_count('reward0', cfg.MICE_GROUPS['EP'], 'Insert Title', 'time (h)', 'head-fixes/h/cage')
-output_csv([bin_starts,count_act_bins], 'BlairAnalysis-Old-EP')
+#[bin_starts,count_act_bins]=hist_raw_count('reward0', cfg.MICE_GROUPS['EP'], 'Insert Title', 'time (h)', 'head-fixes/h/cage')
+#output_csv([bin_starts,count_act_bins], 'BlairAnalysis-Old-EP')
 
 
 #print(current_dat.texts_imported)
