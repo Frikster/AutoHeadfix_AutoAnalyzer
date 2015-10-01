@@ -13,21 +13,14 @@ from PreprocessTextfiles import PreprocessTextfiles
 from Mouse import Mouse
 from scipy import stats
 import numpy as np
-import pylab as p
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
 import pickle
-import os
 import csv
-import struct
-import datetime as datetime
-from time import mktime
-# Bokeh
-import time
-from bokeh.plotting import figure, output_file, output_server, cursession, show
+import sys
+
 
 # pickle_name (str): the name of a pickle file that contains preprocessed textFiles, placed in the same directory as this script 
-pickle_name = raw_input("What is the name of your pickle, good sir? Save it in the folder where this is being run from."
+pickle_name = input("What is the name of your pickle, good sir? Save it in the folder where this is being run from."
                         " If your pickle isn't pickled we shall now pick it ") + '.p'
 # "C:\\Users\\user\\Documents\\Dirk\\Bokeh\\AutoHeadfix_AutoAnalyzer\\Output\\current_dat.p"
 

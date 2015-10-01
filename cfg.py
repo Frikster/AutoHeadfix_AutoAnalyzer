@@ -22,29 +22,32 @@ ACTION_COL_NAME = "Action"
 TEXT_LOC_COL_NAME = "Source"
 
 MICE_GROUPS = {
-    'EL': [2015050115, 1312000377, 1312000159, 1302000245, 1312000300],
+    'EL':[2015050115,1312000377,1312000159,1302000245,1312000300],
     'EP': [1302000139, 2015050202, 1412000238],
     'AB': [1312000592, 1312000573, 1312000090]
 }
 TAGS = []
 for i in range(len(MICE_GROUPS.items())):
-    TAGS.extend(MICE_GROUPS.items()[i][1])
+    TAGS.extend(list(MICE_GROUPS.items())[i][1])
 
-DIR_WITH_TEXTFILES = "T:/AutoHeadFix/"
+DIR_WITH_TEXTFILES = "/media/cornelis/DataCDH/Raw-data"
 FOLDERS_TO_IGNORE = ["Old and or nasty data goes here"]
-OUTPUT_LOC = "C:\\Users\\user\\Downloads\\"
-BIN_TIME = 86400
-#BIN_TIME = 3600
+OUTPUT_LOC = "/home/cornelis/Downloads/"
 
 # This says headfixing has occurred
 HEADFIX_STR = 'reward0'
 ENTRY_STR = 'entry'
 
+seshStart_str = 'SeshStart'
+seshEnd_str = 'SeshEnd'
+seshStartTag_str = '0000000000'
+seshEndTag_str = '0000000000'
+
 
 # Define the time from when we start looking at textfiles
-#ABSOLUTE_START_TIME = "2015-06-13 01:00:00.000000"
-ABSOLUTE_START_TIME = "2015-06-25 01:00:00.000000"
-ABSOLUTE_START_TIME = datetime.strptime(ABSOLUTE_START_TIME, '%Y-%m-%d %H:%M:%S.%f')
-
-ABSOLUTE_END_TIME =  "2015-07-04 01:00:00.000000"
-ABSOLUTE_END_TIME = datetime.strptime(ABSOLUTE_END_TIME, '%Y-%m-%d %H:%M:%S.%f')
+# ABSOLUTE_START_TIME = "2015-06-13 01:00:00.000000"
+# ABSOLUTE_START_TIME = "2015-06-25 01:00:00.000000"
+# ABSOLUTE_START_TIME = datetime.strptime(ABSOLUTE_START_TIME, '%Y-%m-%d %H:%M:%S.%f')
+#
+# ABSOLUTE_END_TIME =  "2015-07-04 01:00:00.000000"
+# ABSOLUTE_END_TIME = datetime.strptime(ABSOLUTE_END_TIME, '%Y-%m-%d %H:%M:%S.%f')
