@@ -40,11 +40,10 @@ BIN_TIME = 86400
 HEADFIX_STR = 'reward0'
 ENTRY_STR = 'entry'
 
-
 # Define the time from when we start looking at textfiles
 #ABSOLUTE_START_TIME = "2015-06-13 01:00:00.000000"
 ABSOLUTE_START_TIME = "2015-06-25 01:00:00.000000"
 ABSOLUTE_START_TIME = datetime.strptime(ABSOLUTE_START_TIME, '%Y-%m-%d %H:%M:%S.%f')
 
-ABSOLUTE_END_TIME =  "2015-07-04 01:00:00.000000"
+ABSOLUTE_END_TIME =  "2015-07-03 01:00:00.000000"
 ABSOLUTE_END_TIME = datetime.strptime(ABSOLUTE_END_TIME, '%Y-%m-%d %H:%M:%S.%f')

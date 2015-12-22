@@ -71,9 +71,6 @@ class PreprocessTextfiles:
         
     def get_col(self,list_of_lists,col_num):
         """return desired column from list of lists as a list"""
-
-        print(list_of_lists)
-        print(np.asarray(list_of_lists))
         return list(np.asarray(list_of_lists)[:,col_num])    
        
     def get_all_text_locs(self):

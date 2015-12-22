@@ -24,7 +24,7 @@ class Mouse:
         self.group = self.findgroup(tag)
         
         #self.all_lines = current_dat.all_lines
-        self.all_lines = [L for L in current_dat.all_lines if int(L[self.TAG_COL])==int(self.tag)]
+        self.all_lines = [L for L in current_dat.all_lines if int(L[self.TAG_COL]) == int(self.tag)]
         # replace check1+ with check+
         for line in self.all_lines:
             if line[self.ACTION_COL] == 'check1+':
@@ -96,7 +96,7 @@ class Mouse:
                 relevantlines_actionA = [line for line in relevantlines if line[self.ACTION_COL]==actionA]
                 relevantlines_actionB = [line for line in relevantlines if line[self.ACTION_COL]==actionB]
                 
-                if len(relevantlines_actionA)==0 or len(relevantlines_actionA)==0:
+                if len(relevantlines_actionA)==0 or len(relevantlines_actionA) == 0:
                     print(relevantlines_actionA)
                     print(relevantlines_actionB) 
 
@@ -104,21 +104,20 @@ class Mouse:
                 actionA_times = self.get_col(relevantlines_actionA,self.TIME_COL)
                 actionB_times = self.get_col(relevantlines_actionB,self.TIME_COL)
             
-                timesbetween = [float(b)-float(a) for a,b in zip(actionA_times,actionB_times)]
+                timesbetween = [float(b)-float(a) for a, b in zip(actionA_times, actionB_times)]
                 total = sum(timesbetween) + total
         return total
-            
 
-    def time_between_actions_list(self,actionA,actionB):
+    def time_between_actions_list(self, actionA, actionB):
         """Returns the time spent between actionA and B by this mouse for each bin""" 
         bin_chamber_time = []
         for lines in self.binned_lines:
             bin_chamber_time.append(self.time_between(actionA,actionB,lines)) 
-        return bin_chamber_time  
-    
+        return bin_chamber_time
 
     def get_between_actions_dist(self,actionA,actionB):
-        """Returns a list that contains each time interval between actionA and actionB for this mouse"""
+        """Returns a list that contains each time interval between actionA and actionB for this mouse
+        Additionally return the start and end times and textfile location for each timepoint of each interval"""
         relevantlines=[L for L in self.all_lines if L[self.ACTION_COL]==actionA or L[self.ACTION_COL]==actionB]
         
         #Drop the first and last line since the first one will typically be check+ and the last one reward0
@@ -138,14 +137,30 @@ class Mouse:
         relevantlines_actionA = [line for line in relevantlines if line[self.ACTION_COL]==actionA]
         relevantlines_actionB = [line for line in relevantlines if line[self.ACTION_COL]==actionB]
         
-        assert(len(relevantlines_actionA)==len(relevantlines_actionA))
+        assert(len(relevantlines_actionA) == len(relevantlines_actionB))
 
         # Get the two columns of times
         actionA_times = self.get_col(relevantlines_actionA, self.TIME_COL)
         actionB_times = self.get_col(relevantlines_actionB, self.TIME_COL)
     
         timesbetween = [float(b)-float(a) for a,b in zip(actionA_times,actionB_times)]
-        return timesbetween
+
+        # Obtain additional info on each interval (start time, end time, textfile loc)
+        # Get all the relevantlines that have each action
+        relevantlines_start_dates = [line[self.DATE_COL] for line in relevantlines if line[self.ACTION_COL] == actionA]
+        relevantlines_end_dates = [line[self.DATE_COL] for line in relevantlines if line[self.ACTION_COL] == actionB]
+        relevantlines_start_times = [line[self.TIME_COL] for line in relevantlines if line[self.ACTION_COL] == actionA]
+        relevantlines_end_times = [line[self.TIME_COL] for line in relevantlines if line[self.ACTION_COL] == actionB]
+        relevantlines_start_textfiles = [line[self.TEXT_LOC_COL_NAME] for line in relevantlines if line[self.ACTION_COL] == actionA]
+        relevantlines_end_textfiles = [line[self.TEXT_LOC_COL_NAME] for line in relevantlines if line[self.ACTION_COL] == actionB]
+
+        assert(len(relevantlines_start_dates) == len(relevantlines_end_dates) ==
+               len(relevantlines_start_times) == len(relevantlines_end_times) ==
+               len(relevantlines_start_textfiles) == len(relevantlines_end_textfiles) == len(relevantlines_actionA))
+
+        return [timesbetween, relevantlines_start_dates, relevantlines_end_dates,
+                relevantlines_start_times, relevantlines_end_times,
+                relevantlines_start_textfiles, relevantlines_end_textfiles]
         
     @staticmethod
     def convert_to_date_obj(date_list):
