@@ -127,17 +127,19 @@ class Mouse:
         if(relevantlines[len(relevantlines)-1][self.ACTION_COL]==actionA):
             print(relevantlines[-1])
             relevantlines.pop(-1)
-        
+
         print(relevantlines[0])
         print(relevantlines[-1])
         assert(relevantlines[0][cfg.ACTION_COL] == actionA)
         assert(relevantlines[len(relevantlines)-1][cfg.ACTION_COL] == actionB)
                   
         # Get all the relevantlines that have each action
-        relevantlines_actionA = [line for line in relevantlines if line[self.ACTION_COL]==actionA]
-        relevantlines_actionB = [line for line in relevantlines if line[self.ACTION_COL]==actionB]
+        relevantlines_actionA = [line for line in relevantlines if line[self.ACTION_COL] == actionA]
+        relevantlines_actionB = [line for line in relevantlines if line[self.ACTION_COL] == actionB]
         
-        assert(len(relevantlines_actionA) == len(relevantlines_actionB))
+        assert(len(relevantlines_actionA) == len(relevantlines_actionB) or
+               len(relevantlines_actionA) == len(relevantlines_actionB)+1 or
+               len(relevantlines_actionA) == len(relevantlines_actionB)-1)
 
         # Get the two columns of times
         actionA_times = self.get_col(relevantlines_actionA, self.TIME_COL)
@@ -147,12 +149,12 @@ class Mouse:
 
         # Obtain additional info on each interval (start time, end time, textfile loc)
         # Get all the relevantlines that have each action
-        relevantlines_start_dates = [line[self.DATE_COL] for line in relevantlines if line[self.ACTION_COL] == actionA]
-        relevantlines_end_dates = [line[self.DATE_COL] for line in relevantlines if line[self.ACTION_COL] == actionB]
-        relevantlines_start_times = [line[self.TIME_COL] for line in relevantlines if line[self.ACTION_COL] == actionA]
-        relevantlines_end_times = [line[self.TIME_COL] for line in relevantlines if line[self.ACTION_COL] == actionB]
-        relevantlines_start_textfiles = [line[self.TEXT_LOC_COL_NAME] for line in relevantlines if line[self.ACTION_COL] == actionA]
-        relevantlines_end_textfiles = [line[self.TEXT_LOC_COL_NAME] for line in relevantlines if line[self.ACTION_COL] == actionB]
+        relevantlines_start_dates = [line[cfg.DATE_COL] for line in relevantlines if line[cfg.ACTION_COL] == actionA]
+        relevantlines_end_dates = [line[cfg.DATE_COL] for line in relevantlines if line[cfg.ACTION_COL] == actionB]
+        relevantlines_start_times = [line[cfg.TIME_COL] for line in relevantlines if line[cfg.ACTION_COL] == actionA]
+        relevantlines_end_times = [line[cfg.TIME_COL] for line in relevantlines if line[cfg.ACTION_COL] == actionB]
+        relevantlines_start_textfiles = [line[cfg.TEXT_LOC_COL] for line in relevantlines if line[cfg.ACTION_COL] == actionA]
+        relevantlines_end_textfiles = [line[cfg.TEXT_LOC_COL] for line in relevantlines if line[cfg.ACTION_COL] == actionB]
 
         assert(len(relevantlines_start_dates) == len(relevantlines_end_dates) ==
                len(relevantlines_start_times) == len(relevantlines_end_times) ==

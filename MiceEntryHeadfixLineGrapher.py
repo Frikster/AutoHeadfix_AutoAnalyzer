@@ -13,20 +13,12 @@ from PreprocessTextfiles import PreprocessTextfiles
 from Mouse import Mouse
 from scipy import stats
 import numpy as np
-import pylab as p
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
 import pickle
-import os
 import csv
-import struct
-import datetime as datetime
-from time import mktime
-# Bokeh
-import time
-from bokeh.plotting import figure, output_file, output_server, cursession, show
+import sys
 
-# pickle_name (str): the name of a pickle file that contains preprocessed textFiles, placed in the same directory as this script 
+# pickle_name (str): the name of a pickle file that contains preprocessed textFiles, placed in the same directory as this script
 pickle_name = raw_input("What is the name of your pickle, good sir? Save it in the folder where this is being run from."
                         " If your pickle isn't pickled we shall now pick it ") + '.p'
 # "C:\\Users\\user\\Documents\\Dirk\\Bokeh\\AutoHeadfix_AutoAnalyzer\\Output\\current_dat.p"
@@ -54,8 +46,6 @@ except BaseException:
     #     data = struct.pack('%id' % mat.shape[0], *mat[:, i])
     #     binfile.write(data)
     # binfile.close()
-    
-current_dat.set_bins()
 
 def mean(data):
     """Return the sample arithmetic mean of data."""
@@ -284,50 +274,31 @@ def hists_for_selected_mice_matrix_maker(action1, action2, selected_mice):
         # Transpose that sucker
         timesbetweens_matrix = np.asarray(timesbetweens_matrix).T.tolist()
         # Add a header
-        header = ["timesbetween", "interval_start_dates", "interval_end_dates", "interval_start_times,"
+        header = ["timesbetween", "interval_start_dates", "interval_end_dates", "interval_start_times",
                   "interval_end_times", "interval_start_textfiles", "interval_end_textfiles"]
         timesbetweens_matrix = [header] + timesbetweens_matrix
         return timesbetweens_matrix
 
+def get_col(list_of_lists,col_num):
+        """return desired column from list of lists as a list"""
+        return list(np.asarray(list_of_lists)[:][ col_num])
+
+def get_cut_off_subset(timesbetweens_matrix, cut_off):
+    return [row[0] for row in timesbetweens_matrix if type(row[0]) is not str and row[0] < cut_off]
 
 def hists_for_selected_mice(action1, action2, bin_no, selected_mice, cut_off = None):
     """Plots histrograms of intervals between action1 and action2 for selected mice
     with bin_no bins and doesn't display any values above cut_off
     returns the interval times and the interval times above the cut_off"""
     timesbetweens_matrix = hists_for_selected_mice_matrix_maker(action1, action2, selected_mice)
+    if cut_off != None:
+      timesbetweens_cutoff_matrix = get_cut_off_subset(timesbetweens_matrix, cut_off)
 
-    timesbetweens_cut_off = [row[0] for row in timesbetweens_matrix if type(row[0]) is not str and row[0] < cut_off]
-
-
-    # Get data for all selected mice and add to lists
-    for tag in selected_mice:
-        m = Mouse(tag, cfg.MICE_GROUPS, current_dat, cfg.BIN_TIME)
-        [timesbetween, interval_start_dates, interval_end_dates, interval_start_times, interval_end_times,
-                interval_start_textfiles, interval_end_textfiles] = m.get_between_actions_dist(action1, action2)
-        interval_tag = len(timesbetween)*[tag]
-
-        timesbetweens = timesbetweens + timesbetween
-        # Concatenate additional info
-        interval_start_dates_all = interval_start_dates_all + interval_start_dates
-        interval_end_dates_all = interval_end_dates_all + interval_end_dates
-        interval_start_times_all = interval_start_times_all + interval_start_times
-        interval_end_times_all = interval_end_times_all + interval_end_times
-        interval_start_textfiles_all = interval_start_textfiles_all + interval_start_textfiles
-        interval_end_textfiles_all = interval_end_textfiles_all + interval_end_textfiles
-
-        # Get those too far right
-        timesbetween_cutoff = [i for i in timesbetween if i >= cut_off]
-        # Get rid of the ones too far to the right
-        if cut_off != None:
-            timesbetween = [i for i in timesbetween if i < cut_off]
-        timesbetweens_cutoff = timesbetweens_cutoff + timesbetween_cutoff
-        if cut_off != None:
-            interval_start_dates_all_cutoff = interval_start_dates_all_cutoff + interval_start_dates_cutoff
-            interval_end_dates_all_cutoff = interval_end_dates_all_cutoff + interval_end_dates_cutoff
-            interval_start_times_all_cutoff = interval_start_times_all_cutoff + interval_start_times_cutoff
-            interval_end_times_all_cutoff = interval_end_times_all_cutoff + interval_end_times_cutoff
-            interval_start_textfiles_all_cutoff = interval_start_textfiles_all_cutoff + interval_start_textfiles_cutoff
-            interval_end_textfiles_all_cutoff = interval_end_textfiles_all_cutoff + interval_end_textfiles_cutoff
+    # Retrieve interval times. Remove header
+    timesbetweens = timesbetweens_matrix[1:]
+    timesbetweens_cutoff = timesbetweens_matrix[1:]
+    timesbetweens = [float(x[0]) for x in timesbetweens]
+    timesbetweens_cutoff = [float(x[0]) for x in timesbetweens_cutoff]
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
@@ -453,12 +424,18 @@ def output_csv(arr, tit):
 #[timesbetweens,timesbetweens_cutoff] = hists_that_tim_likes_for_bokeh('entry','exit',20,600)
 #[timesbetweens, timesbetweens_cutoff] = hists_that_tim_likes_for_bokeh('reward0','check+',20,600)
 
-[timesbetweens,timesbetweens_cutoff]= hists_for_selected_mice('entry', 'exit', 20, cfg.TAGS, 600)
-output_csv(timesbetweens, "Times between entry and exit for 52 days for all mice")
-output_csv(timesbetweens_cutoff, "Times between entry and exit for 52 days for all mice with 600 second cutoff")
-[timesbetweens,timesbetweens_cutoff] = hists_for_selected_mice('reward0', 'check+', 20, cfg.TAGS, 600)
-output_csv(timesbetweens, "Times between reward0 and check+ for 52 days for all mice")
-output_csv(timesbetweens_cutoff, "Times between reward0 and check+ for 52 days for all mice with 600 second cutoff")
+hists_for_selected_mice('entry', 'exit', 20, cfg.TAGS, 600)
+[timesbetweens, timesbetweens_cutoff] = hists_for_selected_mice('reward0', 'check+', 20, cfg.TAGS, 600)
+
+entry_interval_matrix = hists_for_selected_mice_matrix_maker('entry', 'exit', cfg.TAGS)
+entry_interval_matrix_cutoff = get_cut_off_subset(entry_interval_matrix, 600)
+headfix_interval_matrix = hists_for_selected_mice_matrix_maker('reward0', 'check+', cfg.TAGS)
+headfix_interval_matrix_cutoff = get_cut_off_subset(headfix_interval_matrix, 600)
+
+output_csv(entry_interval_matrix, "Times between entry and exit for 52 days for all mice")
+output_csv(entry_interval_matrix_cutoff, "Times between entry and exit for 52 days for all mice with 600 second cutoff")
+output_csv(headfix_interval_matrix, "Times between reward0 and check+ for 52 days for all mice")
+output_csv(headfix_interval_matrix_cutoff, "Times between reward0 and check+ for 52 days for all mice with 600 second cutoff")
 
 #dist_hf = current_dat.find_freqs_for_each(cfg.HEADFIX_STR, cfg.ACTION_COL, cfg.TAGS)
 #########

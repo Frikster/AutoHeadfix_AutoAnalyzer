@@ -163,19 +163,31 @@ class PreprocessTextfiles:
 
         # Delete the column containing textFile locations so that duplicates can be properly removed
         # Create a copy
-        lines_list_copy = copy.deepcopy(lines_list)
-        for x in lines_list_copy:
-          del x[cfg.TEXT_LOC_COL]
-        lines_list_copy = [list(x) for x in set(tuple(x) for x in lines_list_copy)]
+        #lines_list_copy = copy.deepcopy(lines_list)
+        #for x in lines_list_copy:
+        #  del x[cfg.TEXT_LOC_COL]
+        #lines_list_copy = [list(x) for x in set(tuple(x) for x in lines_list_copy)]
         # The copy now contains all the unique lines without the textFile locs
 
+        def unique_by_first_n(n, coll):
+            seen = set()
+            for item in coll:
+                compare = tuple(item[:n])    # Keep only the first `n` elements in the set
+                if compare not in seen:
+                    seen.add(compare)
+                    yield item
+
+        lines_list = list(unique_by_first_n(cfg.TEXT_LOC_COL, lines_list))
+
+
+        # Todo: This batch of code here is balls slow
         # Re-ad the textFile locs to the copy
-        for line_copy_ind in range(len(lines_list_copy)):
-            for line_ind in range(len(lines_list)):
-                if lines_list_copy[line_copy_ind][cfg.TIME_COL] == lines_list[line_ind][cfg.TIME_COL] and \
-                        len(lines_list_copy[line_copy_ind]) == 4:
-                    lines_list_copy[line_copy_ind].append(lines_list[line_ind][cfg.TEXT_LOC_COL])
-        lines_list = lines_list_copy
+        # for line_copy_ind in range(len(lines_list_copy)):
+        #     for line_ind in range(len(lines_list)):
+        #         if lines_list_copy[line_copy_ind][cfg.TIME_COL] == lines_list[line_ind][cfg.TIME_COL] and \
+        #                 len(lines_list_copy[line_copy_ind]) == 4:
+        #             lines_list_copy[line_copy_ind].append(lines_list[line_ind][cfg.TEXT_LOC_COL])
+        # lines_list = lines_list_copy
 
         return lines_list
         
