@@ -281,10 +281,7 @@ class PreprocessTextfiles:
     #                 freqs_for_bin.append(self.get_freq_list_binned(tag_rows_bin,item,col_num)[0])
     #         freqs_for_each.append(freqs_for_bin)
     #     return freqs_for_each
-absolute_start_time = "2015-06-10 01:00:00"
-absolute_end_time = "2015-09-30 01:00:00"
- 
-test = PreprocessTextfiles(absolute_start_time, absolute_end_time)
+
         
         
         

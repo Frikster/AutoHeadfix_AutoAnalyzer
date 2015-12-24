@@ -21,6 +21,8 @@ DATE_COL_NAME = "Date"
 ACTION_COL_NAME = "Action"
 TEXT_LOC_COL_NAME = "Source"
 
+BIN_TIME = 86400
+
 MICE_GROUPS = {
     'EL':[2015050115,1312000377,1312000159,1302000245,1312000300],
     'EP': [1302000139, 2015050202, 1412000238],
@@ -32,7 +34,7 @@ for i in range(len(MICE_GROUPS.items())):
 
 DIR_WITH_TEXTFILES = "/media/cornelis/DataCDH/Raw-data"
 FOLDERS_TO_IGNORE = ["Old and or nasty data goes here"]
-OUTPUT_LOC = "/home/cornelis/Downloads/"
+OUTPUT_LOC = "C:\Users\user\Downloads"
 
 # This says headfixing has occurred
 HEADFIX_STR = 'reward0'

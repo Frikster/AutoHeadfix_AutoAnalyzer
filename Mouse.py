@@ -145,7 +145,25 @@ class Mouse:
         actionB_times = self.get_col(relevantlines_actionB, self.TIME_COL)
     
         timesbetween = [float(b)-float(a) for a,b in zip(actionA_times,actionB_times)]
-        return timesbetween
+
+        # Obtain additional info on each interval (start time, end time, textfile loc)
+        # Get all the relevantlines that have each action
+        relevantlines_start_dates = [line[cfg.DATE_COL] for line in relevantlines if line[cfg.ACTION_COL] == actionA]
+        relevantlines_end_dates = [line[cfg.DATE_COL] for line in relevantlines if line[cfg.ACTION_COL] == actionB]
+        relevantlines_start_times = [line[cfg.TIME_COL] for line in relevantlines if line[cfg.ACTION_COL] == actionA]
+        relevantlines_end_times = [line[cfg.TIME_COL] for line in relevantlines if line[cfg.ACTION_COL] == actionB]
+        #Todo: add the source
+        #relevantlines_start_textfiles = [line[cfg.TEXT_LOC_COL] for line in relevantlines if line[cfg.ACTION_COL] == actionA]
+        #relevantlines_end_textfiles = [line[cfg.TEXT_LOC_COL] for line in relevantlines if line[cfg.ACTION_COL] == actionB]
+
+        assert(len(relevantlines_start_dates) == len(relevantlines_end_dates) ==
+               len(relevantlines_start_times) == len(relevantlines_end_times))
+
+               #len(relevantlines_start_textfiles) == len(relevantlines_end_textfiles) == len(relevantlines_actionA))
+
+        return [timesbetween, relevantlines_start_dates, relevantlines_end_dates,
+                relevantlines_start_times, relevantlines_end_times]
+                #relevantlines_start_textfiles, relevantlines_end_textfiles]
         
     @staticmethod
     def convert_to_date_obj(date_list):
